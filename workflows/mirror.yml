@@ -1,0 +1,51 @@
+# Drop into an adopting repo as .github/workflows/no-adrs-mirror.yml
+#
+# On every push to main, publishes a mirror of this repository's CODE — without
+# its deliberation record — to <this-repo>-no-adrs. The mirror repo, if created
+# by the action, is created PRIVATE: making it public is the owner's own
+# explicit act, by design (see README: The law).
+#
+# Secrets:
+#   MIRROR_TOKEN        PAT or GitHub App token with repo scope on the mirror
+#                       (the default GITHUB_TOKEN cannot push cross-repo)
+#   ANTHROPIC_API_KEY   only if digest != none
+#
+# Name ruled by Mint 5, hub ledger №92 (2026-10-13): ADRs4AI/no-adrs-mirror —
+# "when a tool's essence is subtraction, the compound must name the
+# subtraction, never the subtracted."
+
+name: no-adrs mirror
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      digest:
+        description: "none | index | per-adr"
+        default: "none"
+      dry_run:
+        description: "Build only; upload the tree as an artifact instead of pushing"
+        default: "false"
+
+concurrency:
+  group: no-adrs-mirror
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # filter mode needs the whole history
+
+      - uses: ADRs4AI/no-adrs-mirror@v1
+        with:
+          token: ${{ secrets.MIRROR_TOKEN }}
+          create_if_missing: "true"             # creates PRIVATE, always
+          history_mode: snapshot                # the honest default; see README
+          digest: ${{ github.event.inputs.digest || 'none' }}
+          digest_model: claude-sonnet-5
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          dry_run: ${{ github.event.inputs.dry_run || 'false' }}
+          terms: "The deliberation record is available under the terms published at https://adrs.systems."

@@ -1,0 +1,101 @@
+══════════════════════════════════════════════════════════════════
+ no-adrs mirror — DRY-RUN PROOF
+ source: /Users/jlumbroso/Programming/vscode-adrs-for-ai
+ slug:   ADRs4AI/vscode-adrs4ai
+ out:    /private/tmp/claude-501/-Users-jlumbroso-Programming-adrs4ai-initial-meta-repository/1fe6c239-bc05-4401-b237-557a44dd4d3c/scratchpad/proof-mirror   (local only; nothing is pushed, no API call is made)
+══════════════════════════════════════════════════════════════════
+
+── 1. strip report (what stays, what is withheld, the leak metric) ──
+{
+  "source": "/Users/jlumbroso/Programming/vscode-adrs-for-ai",
+  "strip": [
+    "docs/adr",
+    "docs/inbox",
+    "docs/vignettes",
+    "docs/handoffs",
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".claude",
+    ".pneumatic"
+  ],
+  "files": {
+    "kept": 455,
+    "stripped": 884
+  },
+  "commits": {
+    "mixed": 149,
+    "record_only": 995,
+    "code_only": 644
+  },
+  "note": "mixed commits are the messages that survive filter mode; record-only commits vanish with their messages"
+}
+
+── 2. build: snapshot history, digest index (dry-run) ──
+{
+  "out": "/private/tmp/claude-501/-Users-jlumbroso-Programming-adrs4ai-initial-meta-repository/1fe6c239-bc05-4401-b237-557a44dd4d3c/scratchpad/proof-mirror",
+  "history": "snapshot",
+  "messages": "subject",
+  "files": {
+    "kept": 455,
+    "stripped": 884
+  },
+  "source_sha": "e4f821910bc1eaafc1f2b143afca09829e92b252",
+  "mirror_sha": "1ebafbe5b8d11626360aceefb53cf611193b514e",
+  "digest": {
+    "mode": "index",
+    "count": 45,
+    "dry_run": true
+  },
+  "commits_in_source": {
+    "mixed": 149,
+    "record_only": 995,
+    "code_only": 644
+  }
+}
+
+── 3. the mirror's entire history (snapshot = one commit, zero leaks) ──
+1ebafbe mirror: ADRs4AI/vscode-adrs4ai@e4f821910bc1 without the deliberation record
+
+── 4. DELIBERATIONS-NOTICE.md (the honest badge, verbatim) ──
+# Deliberations notice
+
+This repository is a **mirror without its deliberation record** ("Closed Deliberations" mode). The record exists: **45 ADRs** and **39 seeds** are maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit `e4f821910bc1`), and were withheld from this copy together with 884 files under: `docs/adr`, `docs/inbox`, `docs/vignettes`, `docs/handoffs`, `CLAUDE.md`, `AGENTS.md`, `.claude`, `.pneumatic`.
+
+**Terms**: The record is available on request from the source repository's maintainers; its license is decided separately from this code's.
+
+**Citing the record**: each ADR has a canonical Address of the form `adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<number>#<anchor>`; a resolving Address is the citation.
+
+**Digest**: 45 digest entries are STAGED (dry run — no model call made; prompts recorded in place of summaries) (see `DELIBERATIONS-DIGEST.md`). They are pointers to the record, not the record.
+
+History mode: `snapshot`. Generated 2026-10-13T05:43:15Z by no-adrs-mirror 0.1.0.
+
+── 5. mirror tree (top level) ──
+CHANGELOG.md
+DELIBERATIONS-DIGEST.md
+DELIBERATIONS-NOTICE.md
+docs
+fixture-workspace
+justfile
+kintsugi.lock
+kintsugi.yaml
+LICENSE
+media
+package-lock.json
+package.json
+QUICK-START.md
+README.md
+scripts
+src
+TEMPLATE-UPDATES.md
+tsconfig.integration.json
+tsconfig.json
+vite.config.ts
+vite.mcp-server.config.ts
+
+── 6. suggested README line for the source repo ──
+  > Deliberation record: 45 ADRs + 39 seeds, maintained with the source; this mirror ships the code. See DELIBERATIONS-NOTICE.md.
+
+══════════════════════════════════════════════════════════════════
+ PROOF COMPLETE — nothing pushed, nothing public, no model called.
+ The flip to public, if ever, is the owner's own act.
+══════════════════════════════════════════════════════════════════

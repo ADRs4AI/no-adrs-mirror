@@ -1,0 +1,135 @@
+name: "no-adrs mirror"
+description: >-
+  Publish this repository's code to a mirror repository without its deliberation
+  record ("Closed Deliberations" mode, HQ ADR-0034 §4): strips docs/adr and a
+  parameterized list of other paths, optionally adds model-written digests of
+  each ADR, and always adds DELIBERATIONS-NOTICE.md — the honest badge that the
+  record exists and was withheld.
+author: "ADRs4AI (engine: Covenant 5, 2026-08-26; productionized 2026-10-13 at the rights-holder's word)"
+
+inputs:
+  mirror_repo:
+    description: "Target owner/repo. Default: this repo's name with the -no-adrs suffix."
+    required: false
+    default: "${{ github.repository }}-no-adrs"
+  token:
+    description: >-
+      Token able to push to (and, with create_if_missing, create) the mirror repo.
+      The default GITHUB_TOKEN cannot push to another repository — pass a PAT
+      or a GitHub App token stored as a secret.
+    required: true
+  strip_paths:
+    description: "Newline-separated paths/globs to withhold. Default: the record + the deliberative apparatus."
+    required: false
+    default: |
+      docs/adr
+      docs/inbox
+      docs/vignettes
+      docs/handoffs
+      CLAUDE.md
+      AGENTS.md
+      .claude
+      .pneumatic
+  history_mode:
+    description: "snapshot (one commit, no history — no message leaks) | filter (git filter-repo: code history kept, record-only commits pruned WITH their messages; mixed commits survive)"
+    required: false
+    default: "snapshot"
+  message_mode:
+    description: >-
+      filter mode only: keep | subject (first line only) | scrub (generic message).
+      Default is scrub: measured on this house's own repos, even code-only commit
+      SUBJECTS carry deliberation (HQ adr:0034 It-2) — subject is offered for repos
+      with disciplined terse subjects, never as the honest default.
+    required: false
+    default: "scrub"
+  digest:
+    description: "none | index (one DELIBERATIONS-DIGEST.md) | per-adr (index + docs/deliberations-digest/<adr>.md)"
+    required: false
+    default: "none"
+  digest_model:
+    description: "Model for digests. Jérémie's pick: claude-sonnet-5."
+    required: false
+    default: "claude-sonnet-5"
+  digest_effort:
+    description: "low | medium | high | xhigh | max"
+    required: false
+    default: "medium"
+  digest_prompt:
+    description: "Path (in the source repo) to a prompt file overriding the action's prompts/adr-digest.md"
+    required: false
+    default: ""
+  digest_glob:
+    description: "Which files get digested"
+    required: false
+    default: "docs/adr/[0-9]*.md"
+  anthropic_api_key:
+    description: "Required when digest != none. Store as a secret."
+    required: false
+    default: ""
+  terms:
+    description: "One sentence for DELIBERATIONS-NOTICE.md: under what terms / from whom the record is available"
+    required: false
+    default: "The record is available on request from the source repository's maintainers; its license is decided separately from this code's."
+  create_if_missing:
+    description: >-
+      Create the mirror repo with gh if it does not exist — PRIVATE, always.
+      Making a mirror public is a visibility act reserved to the repo owner's
+      own explicit, per-repo decision; this action deliberately offers no way
+      to do it. Build everything up to the flip; the flip is human.
+    required: false
+    default: "false"
+  dry_run:
+    description: "Build only; upload the tree as a workflow artifact instead of pushing"
+    required: false
+    default: "false"
+  python_version:
+    required: false
+    default: "3.12"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Install tooling
+      shell: bash
+      run: |
+        python -m pip install --quiet --upgrade pip
+        if [ "${{ inputs.history_mode }}" = "filter" ]; then python -m pip install --quiet git-filter-repo; fi
+        if [ "${{ inputs.digest }}" != "none" ]; then python -m pip install --quiet anthropic; fi
+
+    - name: Build the mirror tree
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        args=(build --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/mirror" \
+              --history "${{ inputs.history_mode }}" --messages "${{ inputs.message_mode }}" \
+              --digest "${{ inputs.digest }}" --digest-model "${{ inputs.digest_model }}" \
+              --digest-effort "${{ inputs.digest_effort }}" --digest-glob "${{ inputs.digest_glob }}" \
+              --repo-slug "$GITHUB_REPOSITORY" --terms "${{ inputs.terms }}")
+        while IFS= read -r p; do [ -n "$p" ] && args+=(--strip "$p"); done <<< "${{ inputs.strip_paths }}"
+        if [ -n "${{ inputs.digest_prompt }}" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/${{ inputs.digest_prompt }}"); fi
+        python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
+
+    - name: Upload (dry run)
+      if: ${{ inputs.dry_run == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: no-adrs-mirror
+        path: ${{ runner.temp }}/mirror
+
+    - name: Push to the mirror
+      if: ${{ inputs.dry_run != 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+        create=""; [ "${{ inputs.create_if_missing }}" = "true" ] && create="--create"
+        python "${{ github.action_path }}/mirror.py" push --out "$RUNNER_TEMP/mirror" --mirror "${{ inputs.mirror_repo }}" $create
