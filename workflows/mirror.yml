@@ -48,4 +48,4 @@ jobs:
           digest_model: claude-sonnet-5
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           dry_run: ${{ github.event.inputs.dry_run || 'false' }}
-          terms: "The deliberation record is available under the terms published at https://adrs.systems."
+          terms: "Access to the deliberation record is governed by the terms published at https://adrs.systems."

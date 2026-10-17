@@ -69,7 +69,7 @@ inputs:
   terms:
     description: "One sentence for DELIBERATIONS-NOTICE.md: under what terms / from whom the record is available"
     required: false
-    default: "The record is available on request from the source repository's maintainers; its license is decided separately from this code's."
+    default: "Access to the record is governed by the source repository's maintainers; its license is decided separately from this code's."
   create_if_missing:
     description: >-
       Create the mirror repo with gh if it does not exist — PRIVATE, always.

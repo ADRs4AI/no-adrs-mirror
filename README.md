@@ -6,11 +6,11 @@ Projects built the ADRs-for-AI way keep a *deliberation record* — ADRs, seeds,
 inboxes, the working apparatus of human–AI collaboration — alongside their code.
 Sometimes the code is ready to be public before the record is. This action
 produces and maintains a **mirror repository** (`<your-repo>-no-adrs`) that
-carries the code, omits the record, and says so honestly: every mirror ships a
+carries the code, omits the record, and says so honestly: Every mirror ships a
 `DELIBERATIONS-NOTICE.md` declaring that the record exists, how large it is,
 what was withheld, and how to cite it.
 
-The point is *poise*: the private repository stays the source of truth, the
+The point is *poise*: The private repository stays the source of truth, the
 mirror stays ready, and opening the record later is one decision — not a
 migration.
 
@@ -56,7 +56,7 @@ Run it yourself — one command, local only, nothing pushed, no API call:
 
 ## The mixed-commit metric (why `snapshot` is the default)
 
-Stripping the record from the *tree* does not strip it from *history*: commit
+Stripping the record from the *tree* does not strip it from *history*: Commit
 messages narrate the reasoning. `filter` mode (via `git filter-repo`) prunes
 record-only commits *with* their messages — but **mixed commits** (code + record
 in one commit) survive, and their messages leak. Measured on real repositories,
@@ -80,7 +80,7 @@ Deliberations" mode). The record exists: **44 ADRs** and **39 seeds** are
 maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
 `8bbb7e5b9e71`), and were withheld from this copy together with 872 files.
 
-**Terms**: The record is available under the terms published at
+**Terms**: Access to the record is governed by the terms published at
 https://adrs.systems.
 
 **Citing the record**: each ADR has a canonical Address of the form

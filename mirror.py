@@ -170,8 +170,11 @@ class BuildConfig:
     digest_prompt: Path = DEFAULT_PROMPT_PATH
     digest_dry_run: bool = False
     notice: bool = True
+    # "Governed by", never "available under": in closed mode the record is
+    # precisely NOT available, and the notice must not promise what the mode
+    # withholds (Pharos review F1, 2026-10-17).
     terms: str = (
-        "The record is available on request from the source repository's "
+        "Access to the record is governed by the source repository's "
         "maintainers; its license is decided separately from this code's."
     )
 
