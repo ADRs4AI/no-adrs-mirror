@@ -28,6 +28,12 @@ After every mirror build, for every path not in the strip set, `git hash-object`
 
 One-shot mirrors may stay `snapshot` (one commit, zero leakage — the proven default). A **synced** mirror that re-snapshots on every push orphans every contributor branch between syncs. So synced mode keeps **append-only mirror history**: each sync adds commits on top of the mirror's existing main (tree-to-tree diff committed as one "sync" commit, or filter-repo with a persisted commit-map for repos that want code history). Leakage discipline is unchanged — synced commits carry generated messages (`sync: <source-sha-prefix> without the record`), never source messages.
 
+## NOT: the tree-identity check, cut for CI (Shipwright 5's commissioned engineering read, 2026-10-17)
+
+The design is CI-shaped and endorsed, with one sharper cut: **compare blob OIDs, never re-hashed digests.** Git already stores the content hash — `git -C <src> ls-tree -r HEAD --format='%(objectname) %(path)'`, filtered by the strip set, against the same listing in the mirror's HEAD: identical bytes ⟺ identical OIDs, zero hashing work, one command per side. The check is **set-equality both ways plus per-path OID equality**: a path missing from the mirror fails, a path extra in the mirror fails *unless it is on the generated-files allowlist* (`DELIBERATIONS-NOTICE.md`, `DELIBERATIONS-DIGEST.md`, `docs/deliberations-digest/`) — and that allowlist must derive from the build config, never be hardcoded twice. Two companion fixes make the invariant true at the source instead of merely detected late: **build from `git archive HEAD`** rather than copying the working tree (`shutil.copy2` today ships uncommitted edits under a HEAD-stamped notice, and follows symlinks — a tracked symlink can embed a stripped or out-of-tree file's *content* into the mirror; `git archive` closes both in one move), after which the CI check becomes the regression net rather than the primary defense. The teaching failure names the diverged path and both usual causes: a strip-glob edit between syncs, and a dirty working tree at build time. *(Full engineering review: HQ inbox, shipwright → covenant, 2026-10-17.)*
+
+---
+
 ## Questions
 
 ### QST-ROUNDTRIP-V2: Which contribution posture ships in v2?
