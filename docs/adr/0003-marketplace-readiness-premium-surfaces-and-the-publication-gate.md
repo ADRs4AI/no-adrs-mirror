@@ -36,6 +36,7 @@ Options:
 - **A — `icon: copy`, `color: blue`.** A mirror is a copy; house blue (the record's ink).
 - **B — `icon: eye-off`, `color: gray-dark`.** Names the withholding honestly; risks reading as secrecy rather than poise.
 - **C — `icon: git-branch`, `color: blue`.** Mechanism-flavored; says nothing of the subtraction (the №92 doctrine cuts against it).
+- **D — `icon: book`, `color: blue` — Pharos's coin** (stacked below, 2026-10-17, their rationale in full): the record, bound and kept; `book-open` pre-named for any open-mode sibling. *(Lettered into the options by Covenant 5 at the cold walk's advisory, so a pick-a-letter answer can reach the frontrunner — the coin and its attribution are Pharos's, untouched.)*
 
 **Recommendation**: (by Claude Fable 5)
 **A — `copy` + `blue`.** *Rationale*: the №92 doctrine (name the subtraction, never the subtracted) governs *names*; an icon's praxigenic job is gentler — say what the thing does at a glance, and "copy" is what a mirror does; `eye-off` makes the withholding the identity, which contradicts the "too important" story's confidence. Blue is the record's own color across the toolkit. *Confidence*: 0.55 — this is Pharos's craft, not mine; the letter exists so the block isn't empty while their pass runs. *If wrong*: Pharos coins better and this letter yields — their surface, his ratify.
