@@ -55,6 +55,8 @@ DEFAULT_STRIP = [
     "docs/inbox",
     "docs/vignettes",
     "docs/handoffs",
+    "docs/continuity",       # personal handoffs + compaction prompts (voice-laden by design)
+    "docs/HANDOFF-*.md",     # the template's EMERGENCY handoff lands in docs/ root
     "CLAUDE.md",
     "AGENTS.md",
     ".claude",

@@ -26,6 +26,8 @@ inputs:
       docs/inbox
       docs/vignettes
       docs/handoffs
+      docs/continuity
+      docs/HANDOFF-*.md
       CLAUDE.md
       AGENTS.md
       .claude
@@ -93,27 +95,44 @@ runs:
       with:
         python-version: ${{ inputs.python_version }}
 
+    # SECURITY (S1, Shipwright review 2026-10-17): every input reaches the
+    # shell ONLY via env — `${{ inputs.* }}` inside a run: block is textual
+    # substitution and a composite-action injection vector (the house's own
+    # quote() class, Actions costume). Defense uniform: all inputs, even
+    # enum-shaped ones, no exceptions to audit later.
     - name: Install tooling
       shell: bash
+      env:
+        HISTORY_MODE: ${{ inputs.history_mode }}
+        DIGEST: ${{ inputs.digest }}
       run: |
         python -m pip install --quiet --upgrade pip
-        if [ "${{ inputs.history_mode }}" = "filter" ]; then python -m pip install --quiet git-filter-repo; fi
-        if [ "${{ inputs.digest }}" != "none" ]; then python -m pip install --quiet anthropic; fi
+        if [ "$HISTORY_MODE" = "filter" ]; then python -m pip install --quiet git-filter-repo; fi
+        if [ "$DIGEST" != "none" ]; then python -m pip install --quiet anthropic; fi
 
     - name: Build the mirror tree
       shell: bash
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         GITHUB_REPOSITORY: ${{ github.repository }}
+        HISTORY_MODE: ${{ inputs.history_mode }}
+        MESSAGE_MODE: ${{ inputs.message_mode }}
+        DIGEST: ${{ inputs.digest }}
+        DIGEST_MODEL: ${{ inputs.digest_model }}
+        DIGEST_EFFORT: ${{ inputs.digest_effort }}
+        DIGEST_GLOB: ${{ inputs.digest_glob }}
+        DIGEST_PROMPT: ${{ inputs.digest_prompt }}
+        STRIP_PATHS: ${{ inputs.strip_paths }}
+        TERMS: ${{ inputs.terms }}
       run: |
         set -euo pipefail
         args=(build --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/mirror" \
-              --history "${{ inputs.history_mode }}" --messages "${{ inputs.message_mode }}" \
-              --digest "${{ inputs.digest }}" --digest-model "${{ inputs.digest_model }}" \
-              --digest-effort "${{ inputs.digest_effort }}" --digest-glob "${{ inputs.digest_glob }}" \
-              --repo-slug "$GITHUB_REPOSITORY" --terms "${{ inputs.terms }}")
-        while IFS= read -r p; do [ -n "$p" ] && args+=(--strip "$p"); done <<< "${{ inputs.strip_paths }}"
-        if [ -n "${{ inputs.digest_prompt }}" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/${{ inputs.digest_prompt }}"); fi
+              --history "$HISTORY_MODE" --messages "$MESSAGE_MODE" \
+              --digest "$DIGEST" --digest-model "$DIGEST_MODEL" \
+              --digest-effort "$DIGEST_EFFORT" --digest-glob "$DIGEST_GLOB" \
+              --repo-slug "$GITHUB_REPOSITORY" --terms "$TERMS")
+        while IFS= read -r p; do [ -n "$p" ] && args+=(--strip "$p"); done <<< "$STRIP_PATHS"
+        if [ -n "$DIGEST_PROMPT" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/$DIGEST_PROMPT"); fi
         python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
 
     - name: Upload (dry run)
@@ -128,8 +147,10 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
+        MIRROR_REPO: ${{ inputs.mirror_repo }}
+        CREATE_IF_MISSING: ${{ inputs.create_if_missing }}
       run: |
         set -euo pipefail
         git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
-        create=""; [ "${{ inputs.create_if_missing }}" = "true" ] && create="--create"
-        python "${{ github.action_path }}/mirror.py" push --out "$RUNNER_TEMP/mirror" --mirror "${{ inputs.mirror_repo }}" $create
+        create=""; [ "$CREATE_IF_MISSING" = "true" ] && create="--create"
+        python "${{ github.action_path }}/mirror.py" push --out "$RUNNER_TEMP/mirror" --mirror "$MIRROR_REPO" $create

@@ -42,7 +42,9 @@ a repository whose record is two-thirds of its tree):
 
 ```
 files:   443 kept · 872 withheld (docs/adr, docs/inbox, docs/vignettes,
-         docs/handoffs, CLAUDE.md, AGENTS.md, .claude, .pneumatic)
+         docs/handoffs, CLAUDE.md, AGENTS.md, .claude, .pneumatic — the
+         defaults as of that run; current defaults also withhold
+         docs/continuity and docs/HANDOFF-*.md)
 commits: 975 record-only · 617 code-only · 149 MIXED
 history: snapshot → one commit, zero message leakage
 digests: 44 staged (dry-run; each carries adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<n>)
