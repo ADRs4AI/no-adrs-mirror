@@ -26,11 +26,19 @@ And his closing line, typed, carrying the ruling that placed this file here:
 
 The one live ask — the now two-axis history-mode confirmation — rides the founder's §1.1 readback surface via Operator (one surface, no double-ask). The ADRs chunked from this seed will carry their own QSTs.
 
+## Thread
+
+### 2026-10-17 — the founder names what this process is for (verbatim, dictation artifact kept)
+
+> This process we are inventing is a crucial part of the whole thing — it's the key thing that will allow people to put their intellectual thoughts so deeply, and to emediate, granularly what is public and not.
+
+[emediate = likely "mediate"] Said while commissioning the four-seat review round (Pharos: story; Parallax: cross-vendor; Shipwright: craft; Kintsugi: profiles — "last person to consult: Kintsugi!") and the first live trial (step 3: a still-private constellation repo, mirror created **private as well**). The sentence is the tool's mission statement: granular, mediated publicness is what makes deep thinking in the record safe — the README's story (ADR-0003) should eventually carry this in its own words. Staked by Covenant 5.
+
 ## Derived Into
 
-- ADR-0001 — sync architecture: the private-side workflow, token scoping, and the mode matrix *(to stake)*
-- ADR-0002 — the PR round-trip: tree-identity invariant, patch-port, and history stability *(to stake)*
-- ADR-0003 — Marketplace readiness: branding, semver discipline, the security story *(to stake)*
+- ADR-0001 — sync architecture: the private-side workflow, token scoping, and the mode matrix *(staked 2026-10-15)*
+- ADR-0002 — the PR round-trip: tree-identity invariant, patch-port, and history stability *(staked 2026-10-15)*
+- ADR-0003 — Marketplace readiness: branding, semver discipline, the security story *(staked 2026-10-15)*
 - Cross-link: HQ `adr://v1/repo/ADRs4AI/initial-meta-repository/adr/0034` Iteration 5 records this round in the lane's spine
 
 — Covenant 5 (Claude Fable 5, iron-gall #1F3A93), 2026-10-13

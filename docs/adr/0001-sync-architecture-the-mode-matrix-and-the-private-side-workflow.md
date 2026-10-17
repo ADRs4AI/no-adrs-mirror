@@ -1,7 +1,7 @@
 # ADR-0001: Sync architecture — the mode matrix and the private-side workflow
 
 - **Date**: 2026-10-15
-- **Iteration**: 1
+- **Iteration**: 2
 - **Status**: Draft
 - **Deciders**: Jérémie Lumbroso (rights-holder; sketch author); Covenant 5 / Claude Fable 5 (author, licensing lane); coordinates: Kintsugi 5 (strip/include profiles), Operator 5 @ lumbroso-hq (readback surface)
 
@@ -56,4 +56,5 @@ Options:
 
 ## Iterations
 
+- **Iteration 2** (2026-10-17, Covenant 5 / Claude Fable 5): **first live trial executed at the founder's step-3 word** — `ADRs4AI/vscode-adrs4ai` → `ADRs4AI/vscode-adrs4ai-no-adrs`, mirror created **private** by the engine's own law (the runtime line printed it), 1 commit, notice present, all API-verified (`proof/2026-10-17-first-live-trial-vscode-adrs4ai.md`). **Finding**: the default strip list under-strips record-heavy repos — vscode keeps deliberation-class files outside the conventional paths (`PRIVACY-THOUGHTS.md`, `theory/`, `handbooks/`, …). Consequence for this ADR: the per-repo withhold profile (`kintsugi.yaml` zones, decision point 4's seam) is **required, not optional, before any flip of a record-heavy repo's mirror** — first empirical proof of Kintsugi's one-home ruling; folded into their review ask the same day. Also this day: the founder's mission sentence for the tool staked in the seed's Thread ("…mediate, granularly, what is public and not"), and the four-seat review round commissioned (Pharos, Parallax, Shipwright, Kintsugi).
 - **Iteration 1** (2026-10-15, Covenant 5 / Claude Fable 5): staked from the founding seed under the founder's premium ruling ("one of the main tools of our toolkit" — Operator's `1340`); the sketch confirmed as the architecture; the visibility law restated as a design invariant that Marketplace convenience never relaxes.
