@@ -22,9 +22,9 @@ The founder's sketch (2026-10-13 dictation, this repo's founding seed): *"a work
 ## Questions
 
 ### QST-TOKEN-KIND: Fine-grained PAT or deploy key as the documented default?
-- Status: unanswered — keeper-level preference; either is sound, the docs should bless one
+- Status: unresolved — RETRACTED from the founder's surface 2026-10-17 (Parallax's review proved the A/B framing incoherent: `create_if_missing` needs more authority than contents:write, a credential cannot pre-scope to a repo that doesn't exist, deploy keys are SSH while the code speaks HTTPS+`gh` — so "the Action's code is identical either way" was false, owned by the author). Back to the build bench: the repair is a bootstrap-vs-steady-state split (human creates the mirror, then installs an exact-repo write credential; creation stays an advanced path with separately named temporary authority). Re-stake for Jérémie only if a genuine preference question survives the repair.
 - Why asking: the README's security story teaches one happy path; adopters copy it verbatim.
-- Need: pick a letter (or override — any shape answers)
+- Need: (parked — see Status)
 
 Options:
 - **A — Fine-grained PAT (repo-scoped, contents:write).** One UI, expiry dates enforce rotation, visible in the token dashboard.
@@ -44,6 +44,40 @@ Options:
 - Why asking: batching (cron) trades freshness for quiet; nothing today needs it.
 
 **ANS:** (by Covenant 5)
+[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+
+---
+
+### QST-SYNC-CONSENT: What does the one-time public flip authorize — every future unclassified path, or only approved roots?
+- Status: unanswered — NEW founder-ball from Parallax's cross-vendor review (P0.2, 2026-10-17): once a mirror is public, every successful sync is a publication act, and today the denylist's complement publishes automatically — a filename the policy has never classified ships the moment it exists
+- Why asking: the live trial already proved defaults cannot infer a repo's dialect (record-class files found throughout kept paths); the same blindness applies forward in time to every file not yet written.
+- Need: pick a letter (or override — any shape answers)
+
+Options:
+- **A — Denylist continuity.** Every future unstripped path publishes automatically; the flip is standing consent to the policy's complement, forever.
+- **B — Fail-closed classification.** The owner approves stable public roots (`src/**`, `tests/**`, chosen docs); new paths outside them STOP the sync pending review; withholds stay as defense in depth.
+
+**Recommendation**: (by Claude Fable 5, concurring with Parallax at 0.9)
+**B — fail-closed.** *Rationale*: this is the gated-mode trust posture applied to the tool's own output boundary — "what may cross" should be a first-class contract, not the complement of a filename list; approving roots once keeps it one decision rather than one click per file, and a stopped sync is a cheap, legible failure where a leaked path is an irreversible one (the reversibility asymmetry that governs this whole lane). *Confidence*: 0.85. *If wrong*: real adopters show a complete public-root profile is less reviewable than the denylist — then A with a mandatory new-path report in the sync log, which preserves the review moment without the stop.
+
+**ANS:** (by Jérémie)
+[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+
+---
+
+### QST-DIGEST-APPROVAL: May a changed digest publish unattended, or does it stage for human approval?
+- Status: unanswered — NEW founder-ball from Parallax's review (2026-10-17): digest mode writes model output straight into the next public commit; generation is not declassification
+- Why asking: *"A model may draft the public boundary, but should not silently become the authority that moves it"* (Parallax). The digest's one permitted verbatim sentence and preserved names are exactly the content whose publication wants a human moment; this is the mirror-scale instance of the house's own publication gate.
+- Need: pick a letter (or override — any shape answers)
+
+Options:
+- **A — Unattended.** Digest mode enabled means every regenerated digest publishes on the next sync.
+- **B — Staged by default.** Unchanged approved digests republish freely (cached); a CHANGED digest stages for the owner's approval; a repo may explicitly opt into unattended publication under a recorded policy.
+
+**Recommendation**: (by Claude Fable 5, concurring with Parallax at 0.9)
+**B — staged by default, opt-in to unattended.** *Rationale*: it is the digest-as-duty design (the gated mode's own shape: disclosure mandatory, text at the owner's tempo) carried to the artifact level; caching makes the steady state zero-touch, so the approval moment costs attention only when the boundary actually moved — which is precisely when attention is owed. *Confidence*: 0.85. *If wrong*: a record class with a human-approved prompt + validator demonstrating every permissible output is pre-authorized — then A for that class, recorded.
+
+**ANS:** (by Jérémie)
 [Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
 
 ---

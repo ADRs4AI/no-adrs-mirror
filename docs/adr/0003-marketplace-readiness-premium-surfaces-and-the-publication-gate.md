@@ -48,6 +48,24 @@ Options:
 
 ---
 
+### QST-LICENSE: What license does this repository itself carry?
+- Status: unanswered — NEW founder-ball from Parallax's review (2026-10-17): the repo has no root LICENSE (API-verified), so outsiders have no permission to use, modify, or redistribute the Action at all — no outside adoption is possible without this answer, and the catch lands on the licensing seat's own repo, owned with the full irony
+- Why asking: license posture is per-repo and the rights-holder's alone (HQ `adr:0033`, It-9 doctrine: license artifacts travel by ruling, never by default).
+- Need: pick a letter (or override — any shape answers); nothing lands in the tree before your word, and the repo is private until your flip regardless
+
+Options:
+- **A — MIT at root, nothing else.** The toolkit's established code posture (template, pneumatic, kintsugi all MIT); simplest, badge-clean.
+- **B — MIT at root + a short output note for generated files.** Same MIT, plus a `MIRROR-OUTPUT-NOTE.md` (never appended to LICENSE — the badge lesson is law) stating that files the Action *generates into a mirror* (`DELIBERATIONS-NOTICE.md`, digests) belong to the mirror's owner, carrying the record's terms where one applies — the template-output-grant pattern, applied to this tool's outputs.
+- **C — Defer to the counsel round.** Ships nothing until the QST-COUNSEL route runs; blocks any outside adoption meanwhile.
+
+**Recommendation**: (by Claude Fable 5)
+**B — MIT root plus the separate output note.** *Rationale*: A alone leaves the generated-files question to inference, and this tool's whole product is other people's repos — the note answers "whose is the notice in MY mirror?" before a stranger asks it; the pattern is already proven on the template (launch night's split restored the badge, and It-9 made the receipt doctrine law); MIT itself is standard text and ships on your go alone per QST-COUNSEL's standing shape, while the note's wording can take a counsel pass before the PUBLIC flip without blocking the private estate. *Confidence*: 0.75. *If wrong*: if counsel reads any output note as inviting more questions than it settles, A + the same sentence as plain README prose — the established fallback.
+
+**ANS:** (by Jérémie)
+[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+
+---
+
 ### QST-LISTING-GO: Publish to the Marketplace?
 - Status: deferred — the publication gate is absolute and this is its named slot: his word, expected at the ~Feb calendar window, after the PR-round-trip ADR settles and one live demo pair exists; nothing is owed by anyone until then
 - Why asking: so the gate is legible in the record rather than ambient — the listing is an outward act.

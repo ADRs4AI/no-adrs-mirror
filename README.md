@@ -29,11 +29,14 @@ and disclosing that you keep it are both features.
 
 ## The law
 
-**This action never makes anything public.** `create_if_missing` creates the
-mirror repository **private**, and there is deliberately no input that does
-otherwise. Making a mirror public is a visibility act reserved to the repo
-owner's own explicit, per-repo decision. Build everything up to the flip; the
-flip is human.
+**The Action never changes repository visibility.** It creates a missing
+mirror **private**, and there is deliberately no input that does otherwise.
+After you make a mirror public, each successful sync publishes its newly
+selected contents immediately — which is why *what may cross* is a reviewed
+contract (see `docs/adr/0001`, QST-SYNC-CONSENT), never just the complement of
+a filename list. Making a mirror public is a visibility act reserved to the
+repo owner's own explicit, per-repo decision. Build everything up to the flip;
+the flip is human.
 
 ## Live demo (real numbers)
 
