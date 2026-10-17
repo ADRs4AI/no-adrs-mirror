@@ -48,6 +48,23 @@ Options:
 
 ---
 
+### QST-STORY-OPENING: Which casting of the "too important" two sentences opens the README?
+- Status: unanswered — Pharos drafted both castings (review F2, 2026-10-17) and routed the pick to the rights-holder ("his edit beats both"); the words are his reframe, so the voice is his to choose
+- Why asking: the opening carries the whole launch-story reframe — Closed mode as the product, not the apology. Your own sentence staked this week names the stake: the process that lets people "mediate, granularly, what is public and not."
+- Need: pick a letter, edit either freely, or write a third — any shape answers
+
+Options:
+- **A — Disciplined** (Pharos): "Small repositories can demonstrate this method by opening their entire record. This Action is the other discipline — **what you do when your deliberations are too important to open**: Ship the code, declare the record, keep the reasoning — a statement of worth, not an apology."
+- **B — Closer to your dictation** (Pharos): "Open repositories demo the method with their whole record showing. This one demos **what you do when your deliberations are too important**: A turnkey way to ship the code while the record stays kept — and declared."
+
+**Recommendation**: (by Claude Fable 5)
+**A**, by a hair. *Rationale*: "a statement of worth, not an apology" lands the reframe's whole argument in six words, and the triplet "ship the code, declare the record, keep the reasoning" is the mode matrix made breathable; B's "turnkey" is your own word and keeps your cadence — which is why your edit beats both. *Confidence*: 0.55 — this is taste on your voice, which is yours. *If wrong*: B, or your third casting, lands with zero downstream cost; the placement (directly after the bold one-liner) holds either way.
+
+**ANS:** (by Jérémie)
+[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+
+---
+
 ### QST-LICENSE: What license does this repository itself carry?
 - Status: unanswered — NEW founder-ball from Parallax's review (2026-10-17): the repo has no root LICENSE (API-verified), so outsiders have no permission to use, modify, or redistribute the Action at all — no outside adoption is possible without this answer, and the catch lands on the licensing seat's own repo, owned with the full irony
 - Why asking: license posture is per-repo and the rights-holder's alone (HQ `adr:0033`, It-9 doctrine: license artifacts travel by ruling, never by default).
