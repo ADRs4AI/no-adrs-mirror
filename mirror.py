@@ -164,6 +164,7 @@ class BuildConfig:
     history: str = "snapshot"  # snapshot | filter
     messages: str = "subject"  # keep | subject | scrub | map   (filter mode only)
     message_map: Path | None = None  # messages=map: JSON {original_sha: neutral line}
+    redact_dict: Path | None = None  # messages=redact: JSON {terms:[], patterns:[]} (dictgen)
     disable_workflows: list[str] = field(default_factory=list)  # moved to workflows-disabled/
     repo_slug: str = ""  # owner/repo of the SOURCE, for Addresses
     mirror_slug: str = ""  # owner/repo-no-adrs
@@ -213,22 +214,61 @@ def build_filtered(cfg: BuildConfig) -> dict:
             args += ["--path-glob", pat]
         else:
             args += ["--path", pat]
+    # The message-tier ladder (safety-ordered): map (model lines) → redact
+    # (original subjects, dictionary-redacted — recall bounded by the dict) →
+    # mechanical (deterministic type+diffstat, zero egress) → scrub (constant).
+    # Degrade law: messages may degrade DOWN in warmth, never in privacy —
+    # map's per-commit fallback is mechanical, never the original.
+    MECHANICAL = (
+        "import re\n"
+        "msg = commit.message.decode('utf-8', 'replace')\n"
+        "mt = re.match(r'^(feat|fix|chore|docs|test|refactor|perf|build|ci|style)\\b', msg)\n"
+        "typ = mt.group(1) if mt else 'chore'\n"
+        "files = [fc.filename.decode('utf-8', 'replace') for fc in commit.file_changes]\n"
+        "tops = sorted({f.split('/')[0] for f in files})[:2]\n"
+        "line = typ + ': update ' + (', '.join(tops) if tops else 'files')"
+        " + ' (' + str(len(files)) + (' file)' if len(files) == 1 else ' files)')\n"
+        "commit.message = (line + '\\n').encode()"
+    )
     if cfg.messages == "subject":
         args += ["--message-callback", "return message.split(b'\\n', 1)[0] + b'\\n'"]
     elif cfg.messages == "scrub":
         args += ["--message-callback", "return b'code commit (message withheld)\\n'"]
+    elif cfg.messages == "mechanical":
+        args += ["--commit-callback", MECHANICAL]
+    elif cfg.messages == "redact":
+        # Original SUBJECT line with known tokens replaced by ‹…› — tier 1.5.
+        # Recall is bounded by the dictionary; the notice must say so.
+        if not cfg.redact_dict:
+            raise RuntimeError("messages=redact needs --redact-dict <json from the dictgen subcommand>")
+        dict_path = str(cfg.redact_dict.resolve()).replace("\\", "\\\\").replace("'", "\\'")
+        args += ["--commit-callback", (
+            "import json, re\n"
+            f"d = globals().setdefault('_noadrs_dict', json.load(open('{dict_path}')))\n"
+            "pats = globals().setdefault('_noadrs_pats', [re.compile(p, re.I) for p in d['patterns']]\n"
+            "    + [re.compile(r'(?<!\\w)' + re.escape(t) + r'(?!\\w)') for t in d['terms']])\n"
+            "subj = commit.message.decode('utf-8', 'replace').split('\\n', 1)[0]\n"
+            "for p in pats:\n"
+            "    subj = p.sub('\\u2039\\u2026\\u203a', subj)\n"
+            "subj = re.sub(r'(\\u2039\\u2026\\u203a[\\s,;:/-]*)+', '\\u2039\\u2026\\u203a ', subj).strip()\n"
+            "commit.message = (subj + '\\n').encode()"
+        )]
     elif cfg.messages == "map":
         # Rewritten lines (e.g. model-written neutral summaries) keyed by the
-        # ORIGINAL commit sha; absent keys fall back to a neutral constant so
+        # ORIGINAL commit sha; absent keys fall back to the MECHANICAL line so
         # an incomplete map can never leak an original message.
         if not cfg.message_map:
             raise RuntimeError("messages=map needs --message-map <json of {original_sha: line}>")
         map_path = str(cfg.message_map.resolve()).replace("\\", "\\\\").replace("'", "\\'")
         args += ["--commit-callback", (
-            "import json\n"
+            "import json, re\n"
             f"m = globals().setdefault('_noadrs_msg_map', json.load(open('{map_path}')))\n"
-            "line = m.get(commit.original_id.decode(), 'code maintenance commit')\n"
-            "commit.message = (line.rstrip() + '\\n').encode()"
+            "line = m.get(commit.original_id.decode())\n"
+            "if line is None:\n"
+            + "".join("    " + l + "\n" for l in MECHANICAL.splitlines()[1:-1]) +
+            "    commit.message = (line + '\\n').encode()\n"
+            "else:\n"
+            "    commit.message = (line.rstrip() + '\\n').encode()"
         )]
     git(args, cfg.out)
     kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
@@ -415,10 +455,26 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
             + "). They are pointers to the record, not the record.",
             "",
         ]
+    msg_note = ""
+    if cfg.history == "filter":
+        tier = {
+            "map": "model-written neutral summaries with mechanical fallback",
+            "mechanical": "mechanical summaries (type + changed paths; deterministic, no model)",
+            "redact": "original subjects with dictionary redaction — recall is bounded by the dictionary",
+            "subject": "original subject lines, unredacted",
+            "scrub": "withheld (constant line)",
+            "keep": "original messages, unmodified",
+        }.get(cfg.messages, cfg.messages)
+        prov = ""
+        if cfg.messages == "map" and cfg.message_map and cfg.message_map.exists():
+            prov = f"; map sha256 `{hashlib.sha256(cfg.message_map.read_bytes()).hexdigest()[:12]}`"
+        if cfg.messages == "redact" and cfg.redact_dict and cfg.redact_dict.exists():
+            prov = f"; dictionary sha256 `{hashlib.sha256(cfg.redact_dict.read_bytes()).hexdigest()[:12]}`"
+        msg_note = f" **Commit messages**: {tier}{prov}."
     lines += [
-        f"History mode: `{cfg.history}`"
-        + (f" (messages: {cfg.messages})" if cfg.history == "filter" else "")
-        + f". Generated {now} by no-adrs-mirror {__version__}.",
+        f"History mode: `{cfg.history}`."
+        + msg_note
+        + f" Generated {now} by no-adrs-mirror {__version__}.",
         "",
     ]
     path = cfg.out / NOTICE_FILE
@@ -516,9 +572,12 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     common(b)
     b.add_argument("--out", type=Path, required=True)
     b.add_argument("--history", choices=["snapshot", "filter"], default="snapshot")
-    b.add_argument("--messages", choices=["keep", "subject", "scrub", "map"], default="subject")
+    b.add_argument("--messages", choices=["keep", "subject", "scrub", "map", "mechanical", "redact"],
+                   default="subject")
     b.add_argument("--message-map", type=Path, default=None,
                    help="messages=map: JSON file of {original_sha: neutral line}")
+    b.add_argument("--redact-dict", type=Path, default=None,
+                   help="messages=redact: dictionary JSON from the dictgen subcommand")
     b.add_argument("--disable-workflow", action="append", default=[], dest="disable_workflows",
                    help="workflow filename to move to .github/workflows-disabled/ (repeatable); "
                         "use for publish/release workflows — keep secretless CI live")
@@ -542,11 +601,64 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     q.add_argument("--mirror", required=True, help="owner/repo-no-adrs")
     q.add_argument("--create", action="store_true")
     q.add_argument("--branch", default="main")
+
+    dg = sub.add_parser("dictgen", help="compile a redaction dictionary for messages=redact")
+    dg.add_argument("--registry", type=Path, action="append", default=[],
+                    help="agent-sessions.json (repeatable); seat/alias names become terms")
+    dg.add_argument("--extra", action="append", default=[], help="extra term (repeatable)")
+    dg.add_argument("--out", type=Path, required=True)
     return p.parse_args(argv)
+
+
+# Builtin reference-shaped patterns (case-insensitive): record ids, handles,
+# Addresses, iteration markers, ledger numbers, version parentheticals.
+DICT_BUILTIN_PATTERNS = [
+    r"\bADR-\d{3,4}\b",
+    r"\bQST-[A-Z0-9][A-Z0-9-]*\b",
+    r"adr://\S+",
+    r"\bseed-\d{4}-[\w-]+",
+    r"\bIt-\d+\b",
+    r"\((?:v|version )\d[^)]*\)",
+    r"\b(?:adr|seed):\d{4}(?:#[\w-]+)?\b",
+    r"№\s?\d+\b",
+]
+
+_NAME_KEYS = {"name", "alias", "seat", "display_name", "author", "address_token"}
+
+
+def dictgen(registries: list[Path], extra: list[str], out: Path) -> dict:
+    """Terms are matched CASE-SENSITIVELY (registry casing) — seat names are
+    often common words ('Mint', 'Slate'); case-sensitive matching avoids
+    redacting ordinary prose. Add lowercase variants via --extra when wanted.
+    Recall is bounded by this dictionary, by design — the notice says so."""
+    terms: set[str] = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k in _NAME_KEYS and isinstance(v, str) and 2 <= len(v) <= 64:
+                    terms.add(v.strip())
+                else:
+                    walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    for reg in registries:
+        walk(json.loads(Path(reg).read_text()))
+    terms.update(t for t in extra if t.strip())
+    d = {"patterns": DICT_BUILTIN_PATTERNS, "terms": sorted(terms)}
+    out.write_text(json.dumps(d, ensure_ascii=False, indent=1))
+    return d
 
 
 def main(argv: list[str] | None = None) -> int:
     ns = _parse(argv)
+    if ns.cmd == "dictgen":
+        d = dictgen(ns.registry, ns.extra, ns.out)
+        print(json.dumps({"out": str(ns.out), "terms": len(d["terms"]),
+                          "patterns": len(d["patterns"])}))
+        return 0
     if ns.cmd == "push":
         push(ns.out, ns.mirror, create=ns.create, branch=ns.branch)
         print(f"pushed {ns.out} → {ns.mirror}:{ns.branch}")
@@ -568,7 +680,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = BuildConfig(
         source=source, out=ns.out.resolve(), strip=strip, history=ns.history,
-        messages=ns.messages, message_map=ns.message_map,
+        messages=ns.messages, message_map=ns.message_map, redact_dict=ns.redact_dict,
         disable_workflows=ns.disable_workflows,
         repo_slug=ns.repo_slug, digest=ns.digest,
         digest_glob=ns.digest_glob, digest_model=ns.digest_model,

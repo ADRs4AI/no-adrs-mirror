@@ -164,10 +164,57 @@ def test_filter_map_rewrites_messages_and_falls_back_neutral(source: Path, tmp_p
                               capture_output=True, text=True).stdout.strip().splitlines()
     assert "Neutral mapped line for the mixed change" in subjects
     others = [s for s in subjects if s != "Neutral mapped line for the mixed change"]
-    assert others and set(others) == {"code maintenance commit"}  # the fallback, never the original
+    # Unmapped survivors degrade to the MECHANICAL line (type + paths), never the original.
+    import re as _re
+    assert others and all(_re.match(r"^(feat|fix|chore|docs|test|refactor|perf|build|ci|style): update ", s) for s in others)
     full = subprocess.run(["git", "log", "--format=%B"], cwd=cfg.out,
                           capture_output=True, text=True).stdout
     assert "MIXED" not in full  # no original text survives anywhere
+
+
+@pytest.mark.skipif(shutil.which("git-filter-repo") is None, reason="git-filter-repo not installed")
+def test_filter_mechanical_messages_are_deterministic_type_plus_paths(source: Path, tmp_path: Path):
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", history="filter", messages="mechanical")
+    mirror.build_filtered(cfg)
+    subjects = subprocess.run(["git", "log", "--format=%s"], cwd=cfg.out,
+                              capture_output=True, text=True).stdout.strip().splitlines()
+    import re as _re
+    assert subjects and all(_re.match(r"^(feat|fix|chore|docs|test|refactor|perf|build|ci|style): update .+ \(\d+ files?\)$", s) for s in subjects)
+    full = subprocess.run(["git", "log", "--format=%B"], cwd=cfg.out, capture_output=True, text=True).stdout
+    assert "MIXED" not in full and "founder" not in full
+
+
+@pytest.mark.skipif(shutil.which("git-filter-repo") is None, reason="git-filter-repo not installed")
+def test_filter_redact_replaces_dictionary_tokens_only(source: Path, tmp_path: Path):
+    import json as _json
+    _commit(source, {"src/extra.py": "x = 1\n"},
+            "fix: QST-BACKEND per ADR-0001 — Postgres said no (v1.2) TOKENTEST")
+    d = {"patterns": mirror.DICT_BUILTIN_PATTERNS, "terms": ["Postgres"]}
+    dict_file = tmp_path / "dict.json"
+    dict_file.write_text(_json.dumps(d))
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", history="filter",
+                             messages="redact", redact_dict=dict_file)
+    mirror.build_filtered(cfg)
+    subjects = subprocess.run(["git", "log", "--format=%s"], cwd=cfg.out,
+                              capture_output=True, text=True).stdout
+    line = next(s for s in subjects.splitlines() if "TOKENTEST" in s)
+    # Known tokens redacted (handle, record id, version paren, term)…
+    assert "QST-BACKEND" not in line and "ADR-0001" not in line
+    assert "(v1.2)" not in line and "Postgres" not in line and "‹…›" in line
+    # …but novel words pass through: recall is bounded by the dictionary.
+    assert "said no" in line
+
+
+def test_dictgen_collects_registry_names_and_builtins(tmp_path: Path):
+    import json as _json
+    reg = tmp_path / "agent-sessions.json"
+    reg.write_text(_json.dumps({"sessions": [
+        {"name": "Mint 5", "alias": "mint", "model": "x"},
+        {"name": "Covenant 5", "address_token": "advocate"},
+    ]}))
+    d = mirror.dictgen([reg], ["Jérémie"], tmp_path / "dict.json")
+    assert {"Mint 5", "mint", "Covenant 5", "advocate", "Jérémie"} <= set(d["terms"])
+    assert any("ADR-" in p for p in d["patterns"])
 
 
 def test_digest_per_adr_writes_pointer_files(source: Path, tmp_path: Path):

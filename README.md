@@ -75,6 +75,26 @@ this methodology seriously. So:
   the `report` subcommand prints your mixed-commit count so the choice is
   measured, never assumed.
 
+## Message tiers (what surviving commits say)
+
+Filter mode keeps real history; these tiers decide what each surviving commit's
+message becomes. Safety-ordered, and the degrade law is fixed: **messages may
+degrade down in warmth, never in privacy** — when a better tier is unavailable,
+the engine falls to `mechanical`, never to the original text.
+
+| Tier | Mode | What you get | Needs |
+|---|---|---|---|
+| 1 | `map` | Model-written neutral one-liners (ConventionalCommit form), keyed by original SHA; unmapped survivors fall back to tier 2 | A map file (model access to produce it) |
+| 1.5 | `redact` | Original subjects with known tokens replaced by ‹…› — names (from registries), record ids, handles, Addresses, version tags. **Recall is bounded by the dictionary**; best for terse-conventional repos | `dictgen` output |
+| 2 | `mechanical` | `type: update <paths> (N files)` — deterministic, zero egress, byte-verifiable by anyone | Nothing |
+| 3 | `scrub` | One constant line | Nothing (explicit opt-in; it reads like redaction bars) |
+
+The notice discloses the tier and its provenance (map/dictionary hash), so a
+reader always knows which kind of message they are reading. Build a dictionary
+with `mirror.py dictgen --registry agent-sessions.json --extra "<term>" --out dict.json`;
+terms match case-sensitively (seat names are often common words), patterns
+(ids, handles, Addresses) match case-insensitively.
+
 ## The notice (what a mirror reader sees)
 
 ```markdown
