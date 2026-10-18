@@ -164,6 +164,7 @@ class BuildConfig:
     history: str = "snapshot"  # snapshot | filter
     messages: str = "subject"  # keep | subject | scrub | map   (filter mode only)
     message_map: Path | None = None  # messages=map: JSON {original_sha: neutral line}
+    disable_workflows: list[str] = field(default_factory=list)  # moved to workflows-disabled/
     repo_slug: str = ""  # owner/repo of the SOURCE, for Addresses
     mirror_slug: str = ""  # owner/repo-no-adrs
     digest: str = "none"  # none | index | per-adr
@@ -425,6 +426,35 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
     return path
 
 
+def disable_listed_workflows(cfg: BuildConfig) -> list[str]:
+    """Move named workflow files to .github/workflows-disabled/ — visible and
+    reversible (the notice pattern applied to workflows). Publish/release
+    workflows need secrets a mirror deliberately does not hold; test/lint
+    workflows should usually STAY live (green checks on public code are part
+    of the trust story). Classification is the caller's; this only moves."""
+    moved = []
+    wf = cfg.out / ".github" / "workflows"
+    dst = cfg.out / ".github" / "workflows-disabled"
+    for name in cfg.disable_workflows:
+        src = wf / name
+        if not src.exists():
+            print(f"disable-workflow: {name} not found in mirror tree — skipped (nothing to disable)")
+            continue
+        dst.mkdir(parents=True, exist_ok=True)
+        src.rename(dst / name)
+        moved.append(name)
+    if moved:
+        (dst / "README.md").write_text(
+            "# Disabled workflows\n\n"
+            "These workflows were moved here by the no-adrs mirror because they "
+            "require secrets or publish authority the mirror deliberately does not "
+            "hold (publishing runs from the private source). Test and lint "
+            "workflows remain live in `.github/workflows/`. See "
+            "`DELIBERATIONS-NOTICE.md` for what this mirror is.\n"
+        )
+    return moved
+
+
 # ----------------------------------------------------------------------- commit
 
 
@@ -489,6 +519,9 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     b.add_argument("--messages", choices=["keep", "subject", "scrub", "map"], default="subject")
     b.add_argument("--message-map", type=Path, default=None,
                    help="messages=map: JSON file of {original_sha: neutral line}")
+    b.add_argument("--disable-workflow", action="append", default=[], dest="disable_workflows",
+                   help="workflow filename to move to .github/workflows-disabled/ (repeatable); "
+                        "use for publish/release workflows — keep secretless CI live")
     b.add_argument("--digest", choices=["none", "index", "per-adr"], default="none")
     b.add_argument("--digest-glob", default=DEFAULT_DIGEST_GLOB)
     b.add_argument("--digest-model", default=DEFAULT_DIGEST_MODEL)
@@ -536,6 +569,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = BuildConfig(
         source=source, out=ns.out.resolve(), strip=strip, history=ns.history,
         messages=ns.messages, message_map=ns.message_map,
+        disable_workflows=ns.disable_workflows,
         repo_slug=ns.repo_slug, digest=ns.digest,
         digest_glob=ns.digest_glob, digest_model=ns.digest_model,
         digest_effort=ns.digest_effort, digest_prompt=ns.digest_prompt,
@@ -552,6 +586,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             client = AnthropicDigestClient()
         digest_stats = digest_documents(cfg, client)
+    if cfg.disable_workflows:
+        disable_listed_workflows(cfg)
     if cfg.notice:
         write_notice(cfg, stats, digest_stats)
     sha = None if ns.no_commit else commit_all(cfg, stats)

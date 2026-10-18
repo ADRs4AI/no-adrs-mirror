@@ -129,6 +129,22 @@ def test_filter_scrub_removes_all_messages(source: Path, tmp_path: Path):
     assert set(log.strip().splitlines()) == {"code commit (message withheld)"}
 
 
+def test_disable_workflow_moves_file_and_writes_readme(source: Path, tmp_path: Path):
+    # Publish workflows move to workflows-disabled/ (visible, reversible);
+    # workflows NOT listed stay live; a missing name is a skip, never a crash.
+    _commit(source, {".github/workflows/release.yml": "name: release\n",
+                     ".github/workflows/ci.yml": "name: ci\n"}, "ci: add workflows")
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out",
+                             disable_workflows=["release.yml", "nonexistent.yml"])
+    mirror.build_snapshot(cfg)
+    mirror.disable_listed_workflows(cfg)
+    assert not (cfg.out / ".github/workflows/release.yml").exists()
+    assert (cfg.out / ".github/workflows-disabled/release.yml").exists()
+    assert (cfg.out / ".github/workflows/ci.yml").exists()            # untouched, stays live
+    readme = (cfg.out / ".github/workflows-disabled/README.md").read_text()
+    assert "secrets" in readme and "remain live" in readme
+
+
 @pytest.mark.skipif(shutil.which("git-filter-repo") is None, reason="git-filter-repo not installed")
 def test_filter_map_rewrites_messages_and_falls_back_neutral(source: Path, tmp_path: Path):
     # messages=map: surviving commits get their mapped neutral line (keyed by
