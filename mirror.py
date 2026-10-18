@@ -162,7 +162,8 @@ class BuildConfig:
     out: Path
     strip: list[str] = field(default_factory=lambda: list(DEFAULT_STRIP))
     history: str = "snapshot"  # snapshot | filter
-    messages: str = "subject"  # keep | subject | scrub   (filter mode only)
+    messages: str = "subject"  # keep | subject | scrub | map   (filter mode only)
+    message_map: Path | None = None  # messages=map: JSON {original_sha: neutral line}
     repo_slug: str = ""  # owner/repo of the SOURCE, for Addresses
     mirror_slug: str = ""  # owner/repo-no-adrs
     digest: str = "none"  # none | index | per-adr
@@ -215,6 +216,19 @@ def build_filtered(cfg: BuildConfig) -> dict:
         args += ["--message-callback", "return message.split(b'\\n', 1)[0] + b'\\n'"]
     elif cfg.messages == "scrub":
         args += ["--message-callback", "return b'code commit (message withheld)\\n'"]
+    elif cfg.messages == "map":
+        # Rewritten lines (e.g. model-written neutral summaries) keyed by the
+        # ORIGINAL commit sha; absent keys fall back to a neutral constant so
+        # an incomplete map can never leak an original message.
+        if not cfg.message_map:
+            raise RuntimeError("messages=map needs --message-map <json of {original_sha: line}>")
+        map_path = str(cfg.message_map.resolve()).replace("\\", "\\\\").replace("'", "\\'")
+        args += ["--commit-callback", (
+            "import json\n"
+            f"m = globals().setdefault('_noadrs_msg_map', json.load(open('{map_path}')))\n"
+            "line = m.get(commit.original_id.decode(), 'code maintenance commit')\n"
+            "commit.message = (line.rstrip() + '\\n').encode()"
+        )]
     git(args, cfg.out)
     kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
     _set_mirror_identity(cfg.out)
@@ -472,7 +486,9 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     common(b)
     b.add_argument("--out", type=Path, required=True)
     b.add_argument("--history", choices=["snapshot", "filter"], default="snapshot")
-    b.add_argument("--messages", choices=["keep", "subject", "scrub"], default="subject")
+    b.add_argument("--messages", choices=["keep", "subject", "scrub", "map"], default="subject")
+    b.add_argument("--message-map", type=Path, default=None,
+                   help="messages=map: JSON file of {original_sha: neutral line}")
     b.add_argument("--digest", choices=["none", "index", "per-adr"], default="none")
     b.add_argument("--digest-glob", default=DEFAULT_DIGEST_GLOB)
     b.add_argument("--digest-model", default=DEFAULT_DIGEST_MODEL)
@@ -519,7 +535,8 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = BuildConfig(
         source=source, out=ns.out.resolve(), strip=strip, history=ns.history,
-        messages=ns.messages, repo_slug=ns.repo_slug, digest=ns.digest,
+        messages=ns.messages, message_map=ns.message_map,
+        repo_slug=ns.repo_slug, digest=ns.digest,
         digest_glob=ns.digest_glob, digest_model=ns.digest_model,
         digest_effort=ns.digest_effort, digest_prompt=ns.digest_prompt,
         digest_dry_run=ns.digest_dry_run, notice=not ns.no_notice,

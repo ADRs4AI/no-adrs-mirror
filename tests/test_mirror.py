@@ -129,6 +129,31 @@ def test_filter_scrub_removes_all_messages(source: Path, tmp_path: Path):
     assert set(log.strip().splitlines()) == {"code commit (message withheld)"}
 
 
+@pytest.mark.skipif(shutil.which("git-filter-repo") is None, reason="git-filter-repo not installed")
+def test_filter_map_rewrites_messages_and_falls_back_neutral(source: Path, tmp_path: Path):
+    # messages=map: surviving commits get their mapped neutral line (keyed by
+    # ORIGINAL sha); an unmapped survivor falls back to a constant so an
+    # incomplete map can never leak an original message.
+    import json
+    shas = subprocess.run(["git", "log", "--format=%H %s"], cwd=source,
+                          capture_output=True, text=True).stdout.strip().splitlines()
+    mixed_sha = next(l.split()[0] for l in shas if "MIXED" in l)
+    mapping = {mixed_sha: "Neutral mapped line for the mixed change"}
+    map_file = tmp_path / "map.json"
+    map_file.write_text(json.dumps(mapping))
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", history="filter",
+                             messages="map", message_map=map_file)
+    mirror.build_filtered(cfg)
+    subjects = subprocess.run(["git", "log", "--format=%s"], cwd=cfg.out,
+                              capture_output=True, text=True).stdout.strip().splitlines()
+    assert "Neutral mapped line for the mixed change" in subjects
+    others = [s for s in subjects if s != "Neutral mapped line for the mixed change"]
+    assert others and set(others) == {"code maintenance commit"}  # the fallback, never the original
+    full = subprocess.run(["git", "log", "--format=%B"], cwd=cfg.out,
+                          capture_output=True, text=True).stdout
+    assert "MIXED" not in full  # no original text survives anywhere
+
+
 def test_digest_per_adr_writes_pointer_files(source: Path, tmp_path: Path):
     cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app", digest="per-adr",
                              digest_model="claude-sonnet-5", digest_effort="low")
