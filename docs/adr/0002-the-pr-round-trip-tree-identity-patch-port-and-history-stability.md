@@ -57,7 +57,7 @@ Options:
 ---
 
 ### QST: History mode for synced mirrors — append-only confirmed?
-- Status: deferred — rides the §1.1 combined readback already in front of the rights-holder (via Operator; one surface, no double-ask); recorded here so this ADR is self-contained when his word lands
+- Status: answered — by the rights-holder directly, in-session 2026-10-18 (supersedes the §1.1 readback line; Operator notified), adding a THIRD axis to the staked two: **trust-legibility** — his reaction to the snapshot sample, verbatim: *"a commit history of one and this obscure… I think it's very untrustworthy"*
 - Why asking: the two-axis line — snapshot for one-shot (leakage), append-only + commit-map for synced (contribution) — is one confirm.
 
 **Recommendation**: (by Kintsugi 5, Claude Fable 5 — porcelain lane, the consulted fourth reviewer, 2026-10-17; the commit-map question is mine per HQ `adr:0034#qst-closed-history`, answered there this same pass)
@@ -70,13 +70,19 @@ Options:
 
 *Confidence*: High on 1–2 (the kinship boundary is clean and the lock laws are paid-for); High on 3 (it is a mechanical consequence of the invariant's own definition — generated files are neither stripped nor source). *If wrong*: if a federated port flow someday runs mirror-side without source access, the map's home reopens — and the answer then is a *redacted projection* of the source-side map (mirror-sha-only), never relocation of the full one. 🏺
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie, 2026-10-18, verbatim; mechanism + proof appended by Covenant 5)
+
+> I am hoping you find that you can have the actions rewrite the git history from the source repo to the target repo by stripping the stuff with filter-branch and rewrite it. But every rewrite is going to create different commits. If anybody is referencing anything in the codebase it completely breaks every refresh. That's its own kind of debilitating because it means the codebase loses a particular kind of legibility — it can't be linked to externally. Perhaps that's a feature! Not one I would use, it's sort of an evil feature. So ideally, there are two phases:
+> - the target repo doesn't exist (or the parameters are changed catastrophically in a way that requires rewriting everything): start from scratch filter-branch, nothing can be done
+> - if the target repo exists: is it possible to append to its existing commit history rather than rewriting it all?
+
+**Mechanism, verified by proof the same night**: yes — `git filter-repo --state-branch <ref>` persists the commit-map between runs; later runs filter only NEW source commits and graft them onto the previously-filtered history, old SHAs untouched. Synthetic proof (~04:30 UTC): epoch-1 filter → HEAD `d714c98`; one new source commit; incremental re-run → the new commit atop the UNCHANGED old head, `merge-base --is-ancestor` fast-forward confirmed, old SHA still valid. **Appended, not rewritten** — external links survive every refresh. The state ref is precisely the commit-map Kintsugi homed source-side above (lock laws apply to it). His "evil feature" aside is recorded: per-sync rewrite (anti-linkability) remains available as a deliberate posture, never the default for anything meant to be referenced. The sample mirror was rebuilt the same hour as a full-history filter+scrub epoch-1: 797 commits live, private.
 
 ---
 
 ## Action Items
 
+- [ ] **Two-phase history engine** (the rights-holder's 10-18 design): phase A (no target / catastrophic parameter change) = full filter rewrite, force-push, **declared epoch** stamped in the notice ("history epoch N, rebuilt YYYY-MM-DD" — the honest-notice pattern applied to history itself); phase B (target exists) = incremental filter via `--state-branch` (map in the private source), **plain fast-forward push, never --force**; a non-FF in phase B fails closed with a teaching message and awaits the human word for a new epoch — Owner: Covenant 5, composing with Shipwright's build-from-archive hand
 - [ ] Tree-identity CI check in the Action (with a teaching failure message) — Owner: Covenant 5
 - [ ] Notice sentence (the port promise) added to the template on QST-ROUNDTRIP-V2's answer — Owner: Covenant 5
 - [ ] Port runbook (`PORTING.md`): the four commands + the bot-comment template — Owner: Covenant 5
