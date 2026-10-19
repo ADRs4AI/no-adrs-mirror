@@ -5,7 +5,7 @@
 name: "no-adrs-mirror"
 description: >-
   Publish this repository's code to a mirror repository without its deliberation
-  record ("Closed Deliberations" mode, HQ ADR-0034 §4): strips docs/adr and a
+  record ("Closed Deliberations" mode): strips docs/adr and a
   parameterized list of other paths, optionally adds model-written digests of
   each ADR, and always adds DELIBERATIONS-NOTICE.md — the honest badge that the
   record exists and was withheld.
@@ -56,8 +56,8 @@ inputs:
       the map does not cover degrades DOWN in warmth (to mechanical), never to
       its original text; a missing or unreadable companion FILE fails the build
       (fail-closed — a config typo must not silently change the output).
-      Default is scrub: measured on this house's own repos, even code-only commit
-      SUBJECTS carry deliberation (HQ adr:0034 It-2) — subject is offered for repos
+      Default is scrub: measured on our own repositories, even code-only commit
+      SUBJECTS carry deliberation — subject is offered for repos
       with disciplined terse subjects, never as the honest default.
     required: false
     default: "scrub"

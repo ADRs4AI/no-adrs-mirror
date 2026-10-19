@@ -485,8 +485,9 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
         "# Deliberations notice",
         "",
         f"This repository is a **mirror without its deliberation record** "
-        f"(\"Closed Deliberations\" mode). The record exists: **{len(adrs)} ADRs** and "
-        f"**{len(seeds)} seeds** are maintained alongside the source at `{slug}` "
+        f"(\"Closed Deliberations\" mode — ADRs-for-AI practice: https://adrs.systems). "
+        f"The record exists: **{len(adrs)} ADRs** and "
+        f"**{len(seeds)} seeds** (early-stage records) are maintained alongside the source at `{slug}` "
         f"(source commit `{stats['source_sha'][:12]}`), and were withheld from this copy "
         f"together with {stats['stripped']} files under: "
         + ", ".join(f"`{p}`" for p in cfg.strip)

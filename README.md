@@ -104,14 +104,14 @@ messages narrate the reasoning.
 | Tier | `message_mode` | Each surviving message becomes | Needs |
 |---|---|---|---|
 | 1 | `map` | Your supplied one-liner (e.g. model-written), keyed by original SHA; commits the map misses get tier 2 | `message_map`: a `{sha: line}` JSON you produce |
-| 1.5 | `redact` | Original subjects with known tokens replaced by ‹…› — seat names, record ids, `adr://` Addresses, version tags. **Recall is bounded by the dictionary** | `redact_dict` from `dictgen` |
+| 1.5 | `redact` | Original subjects with known tokens replaced by ‹…› — seat (agent) names, record ids, `adr://` Addresses, version tags. **Recall is bounded by the dictionary** | `redact_dict` from `dictgen` |
 | 2 | `mechanical` | `type: update <top dirs> (N files)` — keeps the original's conventional-commit type (else `chore`); deterministic, no model | Nothing |
 | 3 | `scrub` (default) | The constant line `code commit (message withheld)` | Nothing |
 
 The degrade law is fixed: a commit the map does not cover falls to
 `mechanical`, never to its original text. `subject` and `keep` also exist for
-terse-subject repos — though measured on this house's own repos (HQ
-`adr:0034`), even *code-only* subjects carry deliberation; the default stays
+terse-subject repos — though measured on our own repositories, even
+*code-only* subjects carry deliberation; the default stays
 `scrub`. The notice discloses the tier in use and the
 map/dictionary hash. Build a dictionary with
 `python3 mirror.py dictgen --registry agent-sessions.json --extra "<term>" --out dict.json`
@@ -125,7 +125,8 @@ Counts from the receipted run; prose as `write_notice` writes it today:
 # Deliberations notice
 
 This repository is a **mirror without its deliberation record** ("Closed
-Deliberations" mode). The record exists: **45 ADRs** and **39 seeds** are
+Deliberations" mode — ADRs-for-AI practice: https://adrs.systems). The record
+exists: **45 ADRs** and **39 seeds** (early-stage records) are
 maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
 `e4f821910bc1`), and were withheld from this copy together with 884 files
 under: `docs/adr`, `docs/inbox`, `docs/vignettes`, …
@@ -212,8 +213,9 @@ Fine-tuning (`digest_effort`, `digest_style`, `digest_glob`, `digest_prompt`,
 
 The Action is Apache-2.0 ([`LICENSE`](LICENSE)); files it generates **into
 your mirror** belong to the mirror's owner
-([`MIRROR-OUTPUT-NOTE.md`](MIRROR-OUTPUT-NOTE.md)). Design: HQ `adr:0034`
-(Open Deliberations) and `docs/adr/` here. Built 2026-08-26;
+([`MIRROR-OUTPUT-NOTE.md`](MIRROR-OUTPUT-NOTE.md)). Design: ADR-0034 of the
+maintainers' own deliberation record — kept closed, exactly the practice this
+Action serves — and `docs/adr/` here. Built 2026-08-26;
 productionized 2026-10-13; first live trial 2026-10-17 (`proof/`).
 Tests: `tests/test_mirror.py`. The digest prompt is
 `prompts/adr-digest.md`; every digest records model, prompt hash, and
