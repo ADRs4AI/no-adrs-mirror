@@ -1,13 +1,14 @@
+(paths redacted for publication 2026-10-19 — machine-local locations and a session id; every count, sha, and listed file is untouched)
 ══════════════════════════════════════════════════════════════════
  no-adrs mirror — DRY-RUN PROOF
- source: /Users/jlumbroso/Programming/vscode-adrs-for-ai
+ source: ~/Programming/vscode-adrs-for-ai
  slug:   ADRs4AI/vscode-adrs4ai
- out:    /private/tmp/claude-501/-Users-jlumbroso-Programming-adrs4ai-initial-meta-repository/1fe6c239-bc05-4401-b237-557a44dd4d3c/scratchpad/proof-mirror   (local only; nothing is pushed, no API call is made)
+ out:    <session-scratchpad>/proof-mirror   (local only; nothing is pushed, no API call is made)
 ══════════════════════════════════════════════════════════════════
 
 ── 1. strip report (what stays, what is withheld, the leak metric) ──
 {
-  "source": "/Users/jlumbroso/Programming/vscode-adrs-for-ai",
+  "source": "~/Programming/vscode-adrs-for-ai",
   "strip": [
     "docs/adr",
     "docs/inbox",
@@ -32,7 +33,7 @@
 
 ── 2. build: snapshot history, digest index (dry-run) ──
 {
-  "out": "/private/tmp/claude-501/-Users-jlumbroso-Programming-adrs4ai-initial-meta-repository/1fe6c239-bc05-4401-b237-557a44dd4d3c/scratchpad/proof-mirror",
+  "out": "<session-scratchpad>/proof-mirror",
   "history": "snapshot",
   "messages": "subject",
   "files": {
