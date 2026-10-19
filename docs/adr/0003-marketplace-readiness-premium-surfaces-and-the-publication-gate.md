@@ -110,11 +110,11 @@ Yes, Option B. But let's go with Apache 2.0 instead, for patent and trademark re
 ---
 
 ### QST-LISTING-GO: Publish to the Marketplace?
-- Status: deferred — the publication gate is absolute and this is its named slot: his word, IMMINENT per his 2026-10-18 launch-day ruling ("plan for its imminent release in the GitHub Marketplace" — supersedes the earlier ~Feb framing); readiness work accelerates accordingly, the word itself remains the gate
+- Status: answered
 - Why asking: so the gate is legible in the record rather than ambient — the listing is an outward act.
 
-**ANS:** (by Jérémie, when the day comes)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso)
+Yes. This is an important component: It's intimidating to commit your thinking, the good, the bad, the vulnerable — the parts that reveal more about what you think than code would. The most important scaffold to helping people get there is the ability to easily pull a screen of privacy, one that is robust, reliable, easy to access. Publication of `no-adrs-mirror` to the Marketplace is essential from Day 1.
 
 ---
 
