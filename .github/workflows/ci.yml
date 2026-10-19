@@ -1,0 +1,16 @@
+# Minimal test gate — landed pre-launch (Covenant 5, 2026-10-19) so the public
+# repo never sits uncovered; Shipwright 5's fuller CI hand (S2/S3 archive
+# builds, regression pins) supersedes this file when it lands.
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install --quiet pytest git-filter-repo
+      - run: python -m pytest tests/ -q
