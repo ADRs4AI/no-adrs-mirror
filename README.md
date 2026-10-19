@@ -11,13 +11,26 @@ Shipping and disclosing are two decisions; this Action lets them keep separate
 clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a
 confession.
 
-Projects built the ADRs-for-AI way keep a *deliberation record* — ADRs, seeds,
-inboxes, the working apparatus of human–AI collaboration — alongside their code.
-Sometimes the code is ready to be public before the record is. This action
-produces and maintains a **mirror repository** (`<your-repo>-no-adrs`) that
-carries the code, omits the record, and says so honestly: Every mirror ships a
-`DELIBERATIONS-NOTICE.md` declaring that the record exists, how large it is,
-what was withheld, and how to cite it.
+## What it does, concretely
+
+You work in a **private** repository that holds both your code and your
+thinking — ADRs, design notes, agent inboxes (a *deliberation record*, in
+[ADRs-for-AI](https://adrs.systems/) practice). On every push, this Action
+rebuilds a second repository from it:
+
+```text
+your-repo (private, where you work)      your-repo-no-adrs (the mirror)
+├── src/                                 ├── src/                ← identical
+├── tests/                               ├── tests/              ← identical
+├── docs/adr/        ─┐                  ├── DELIBERATIONS-NOTICE.md ← generated
+├── docs/inbox/       ├─ withheld        └── (nothing else from docs/adr,
+└── CLAUDE.md        ─┘                       docs/inbox, CLAUDE.md, …)
+```
+
+Same code, byte for byte. The record stays home. One generated file —
+`DELIBERATIONS-NOTICE.md` — says so honestly: the record exists, here is its
+size, here is what was withheld, here is how to cite it. The mirror is born
+**private**; you make it public when you choose, and the Action never does.
 
 The point is *poise*: The private repository stays the source of truth, the
 mirror stays ready, and opening the record later is one decision — not a
@@ -47,10 +60,16 @@ a filename list. Making a mirror public is a visibility act reserved to the
 repo owner's own explicit, per-repo decision. Build everything up to the flip;
 the flip is human.
 
-## Live demo (real numbers)
+## Preview before anything ships (the dry run)
 
-Dry-run against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code extension,
-a repository whose record is two-thirds of its tree):
+A **dry run** builds the complete mirror into a local folder and pushes
+nothing: you read exactly what *would* become public — every kept file, every
+rewritten commit message, the generated notice — before anything leaves your
+machine. (In CI, setting `dry_run: "true"` does the same and uploads the built
+tree as a workflow artifact instead of pushing.)
+
+Here is a real one, against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code
+extension, a repository whose record is two-thirds of its tree):
 
 ```
 files:   443 kept · 872 withheld (docs/adr, docs/inbox, docs/vignettes,
@@ -193,7 +212,7 @@ its standing:
 | `digest` | `none` | `index` / `per-adr`; requires `anthropic_api_key` |
 | `digest_model` | `claude-sonnet-5` | model, prompt-hash, timestamp recorded per digest |
 | `create_if_missing` | `false` | creates **private**, always |
-| `dry_run` | `false` | build + upload artifact; push nothing |
+| `dry_run` | `false` | preview: build + upload as a workflow artifact; push nothing |
 
 ## Provenance
 
