@@ -205,6 +205,20 @@ def test_filter_redact_replaces_dictionary_tokens_only(source: Path, tmp_path: P
     assert "said no" in line
 
 
+def test_digest_brief_style_and_inline_prompt(source: Path, tmp_path: Path):
+    # brief style appends the one-sentence override; inline prompt text wins
+    # over the prompt file; both are visible in the dry-run prompt sink.
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app",
+                             digest="index", digest_style="brief",
+                             digest_prompt_text="CUSTOM-INLINE-PROMPT for the index.",
+                             digest_dry_run=True)
+    (tmp_path / "out").mkdir()
+    client = mirror.DryRunDigestClient(tmp_path / "prompts")
+    mirror.digest_documents(cfg, client, now="2026-01-01T00:00:00Z")
+    sent = next((tmp_path / "prompts").glob("*.prompt.txt")).read_text()
+    assert "CUSTOM-INLINE-PROMPT" in sent and "exactly ONE sentence" in sent
+
+
 def test_dictgen_collects_registry_names_and_builtins(tmp_path: Path):
     import json as _json
     reg = tmp_path / "agent-sessions.json"

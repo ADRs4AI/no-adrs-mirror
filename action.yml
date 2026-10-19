@@ -71,8 +71,27 @@ inputs:
     description: "Which files get digested"
     required: false
     default: "docs/adr/[0-9]*.md"
+  digest_style:
+    description: "full | brief — brief writes the ADR index summary: one-sentence bullets per record"
+    required: false
+    default: "full"
+  digest_prompt_text:
+    description: >-
+      Inline prompt string; wins over digest_prompt. Prefer this for
+      customization — it is self-contained and versioned with your workflow,
+      where a file path must exist in the source tree.
+    required: false
+    default: ""
   anthropic_api_key:
     description: "Required when digest != none. Store as a secret."
+    required: false
+    default: ""
+  disable_workflows:
+    description: >-
+      Newline-separated workflow filenames to move to
+      .github/workflows-disabled/ in the mirror (publish/release workflows
+      that need secrets the mirror does not hold). Test/lint workflows should
+      stay live — green checks on public code are part of the trust story.
     required: false
     default: ""
   terms:
@@ -129,7 +148,10 @@ runs:
         DIGEST_EFFORT: ${{ inputs.digest_effort }}
         DIGEST_GLOB: ${{ inputs.digest_glob }}
         DIGEST_PROMPT: ${{ inputs.digest_prompt }}
+        DIGEST_STYLE: ${{ inputs.digest_style }}
+        DIGEST_PROMPT_TEXT: ${{ inputs.digest_prompt_text }}
         STRIP_PATHS: ${{ inputs.strip_paths }}
+        DISABLE_WORKFLOWS: ${{ inputs.disable_workflows }}
         TERMS: ${{ inputs.terms }}
       run: |
         set -euo pipefail
@@ -137,8 +159,10 @@ runs:
               --history "$HISTORY_MODE" --messages "$MESSAGE_MODE" \
               --digest "$DIGEST" --digest-model "$DIGEST_MODEL" \
               --digest-effort "$DIGEST_EFFORT" --digest-glob "$DIGEST_GLOB" \
+              --digest-style "$DIGEST_STYLE" --digest-prompt-text "$DIGEST_PROMPT_TEXT" \
               --repo-slug "$GITHUB_REPOSITORY" --terms "$TERMS")
         while IFS= read -r p; do [ -n "$p" ] && args+=(--strip "$p"); done <<< "$STRIP_PATHS"
+        while IFS= read -r w; do [ -n "$w" ] && args+=(--disable-workflow "$w"); done <<< "$DISABLE_WORKFLOWS"
         if [ -n "$DIGEST_PROMPT" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/$DIGEST_PROMPT"); fi
         python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
 

@@ -41,6 +41,7 @@ import hashlib
 import json
 import os
 import re
+import logging
 import shutil
 import subprocess
 import sys
@@ -49,6 +50,31 @@ from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
 __version__ = "0.1.0"
+
+# Operator-facing narration goes through `log` (stderr; stdout stays the
+# machine interface — the JSON result). On a GitHub runner, anything worth a
+# human's glance ALSO lands in the job's Summary page via step_summary().
+# Verbosity: NO_ADRS_LOG=debug|info|warning (default info).
+log = logging.getLogger("no-adrs-mirror")
+logging.basicConfig(
+    stream=sys.stderr,
+    level=getattr(logging, os.environ.get("NO_ADRS_LOG", "info").upper(), logging.INFO),
+    format="%(levelname)s no-adrs-mirror: %(message)s",
+)
+
+
+def step_summary(markdown: str) -> None:
+    """Append a Markdown block to $GITHUB_STEP_SUMMARY when running in
+    Actions; a silent no-op elsewhere. Failures to write are logged, never
+    fatal — the summary is a courtesy surface, the log is the record."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a") as fh:
+            fh.write(markdown.rstrip() + "\n\n")
+    except OSError as exc:  # pragma: no cover - runner-environment specific
+        log.warning("could not write GITHUB_STEP_SUMMARY (%s)", exc)
 
 DEFAULT_STRIP = [
     "docs/adr",
@@ -76,6 +102,8 @@ DEFAULT_PROMPT_PATH = HERE / "prompts" / "adr-digest.md"
 
 
 def git(args: list[str], cwd: Path, check: bool = True) -> str:
+    """Run a git command in `cwd` and return stdout; raises on failure when
+    `check` (the default) so no git error can pass silently."""
     result = subprocess.run(
         ["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False
     )
@@ -118,6 +146,9 @@ def is_stripped(path: str, patterns: list[str]) -> bool:
 
 
 def partition(paths: Iterable[str], patterns: list[str]) -> tuple[list[str], list[str]]:
+    """Split paths into (kept, stripped) under the withhold patterns — the
+    single boundary function every mode shares, so 'what crosses' has exactly
+    one implementation to audit."""
     kept, stripped = [], []
     for p in paths:
         (stripped if is_stripped(p, patterns) else kept).append(p)
@@ -128,6 +159,9 @@ def partition(paths: Iterable[str], patterns: list[str]) -> tuple[list[str], lis
 
 
 def mixed_commit_count(source: Path, patterns: list[str]) -> tuple[int, int, int]:
+    """Count (mixed, record-only, code-only) commits in the source. Mixed
+    commits are filter mode's residual message-leak surface; `report` prints
+    these so the history-mode choice is measured, never assumed."""
     """(mixed, record_only, code_only) over the source's full history.
 
     Mixed commits are the residual leak of `filter` mode: their messages
@@ -173,6 +207,8 @@ class BuildConfig:
     digest_model: str = DEFAULT_DIGEST_MODEL
     digest_effort: str = DEFAULT_DIGEST_EFFORT
     digest_prompt: Path = DEFAULT_PROMPT_PATH
+    digest_prompt_text: str = ""  # inline prompt; wins over digest_prompt when set
+    digest_style: str = "full"  # full | brief (one-sentence bullets — the ADR index summary)
     digest_dry_run: bool = False
     notice: bool = True
     # "Governed by", never "available under": in closed mode the record is
@@ -185,6 +221,9 @@ class BuildConfig:
 
 
 def build_snapshot(cfg: BuildConfig) -> dict:
+    """One-commit mirror: the kept tree at source HEAD, zero history, zero
+    message leakage. The quick-poise mode; filter mode is the linkable one."""
+    log.info("snapshot build: %s -> %s", cfg.source, cfg.out)
     kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
@@ -201,6 +240,11 @@ def build_snapshot(cfg: BuildConfig) -> dict:
 
 
 def build_filtered(cfg: BuildConfig) -> dict:
+    """Full-history mirror via git-filter-repo: record paths excised from
+    every commit, record-only commits pruned WITH their messages, surviving
+    messages rewritten per the tier ladder (map/redact/mechanical/scrub).
+    Old mirror SHAs stay stable across incremental re-runs (phase B)."""
+    log.info("filter build: %s -> %s (messages=%s)", cfg.source, cfg.out, cfg.messages)
     if shutil.which("git-filter-repo") is None:
         raise RuntimeError(
             "history=filter needs git-filter-repo (pip install git-filter-repo)"
@@ -362,8 +406,22 @@ def first_heading(text: str) -> str:
 
 
 def digest_documents(cfg: BuildConfig, client: DigestClient, now: str | None = None) -> dict:
-    prompt = cfg.digest_prompt.read_text()
+    """Write the digest index (and per-record files in per-adr mode): one
+    model-written summary per record, each carrying its source's canonical
+    Address. `digest_prompt_text` (inline string) wins over the prompt file —
+    a workflow-inline prompt is self-contained and versioned with the caller,
+    where a path must exist in the source tree (error-prone across repos).
+    `digest_style=brief` asks for one-sentence bullets (the ADR index
+    summary); `full` is the standard digest. Approval posture: the
+    rights-holder's staged-by-default ruling (ADR-0001 QST-DIGEST-APPROVAL)
+    governs when changed output may publish."""
+    prompt = cfg.digest_prompt_text or cfg.digest_prompt.read_text()
+    if cfg.digest_style == "brief":
+        prompt += ("\nSTYLE OVERRIDE: exactly ONE sentence per record, "
+                   "bullet-friendly, max 25 words. No headings, no lists inside the summary.")
     prompt_sha = hashlib.sha256(prompt.encode()).hexdigest()[:12]
+    log.info("digest: mode=%s style=%s model=%s dry_run=%s",
+             cfg.digest, cfg.digest_style, cfg.digest_model, cfg.digest_dry_run)
     now = now or _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sources = sorted(
         p for p in tracked_files(cfg.source) if fnmatch.fnmatch(p, cfg.digest_glob)
@@ -494,11 +552,16 @@ def disable_listed_workflows(cfg: BuildConfig) -> list[str]:
     for name in cfg.disable_workflows:
         src = wf / name
         if not src.exists():
-            print(f"disable-workflow: {name} not found in mirror tree — skipped (nothing to disable)")
+            log.warning("disable-workflow: %s not found in mirror tree — skipped (nothing to disable)", name)
             continue
         dst.mkdir(parents=True, exist_ok=True)
         src.rename(dst / name)
+        log.info("disable-workflow: %s -> .github/workflows-disabled/", name)
         moved.append(name)
+    if moved:
+        step_summary("**Workflows disabled in the mirror** (need secrets/publish authority "
+                     "the mirror does not hold): " + ", ".join(f"`{m}`" for m in moved)
+                     + " — moved to `.github/workflows-disabled/`, test/lint workflows stay live.")
     if moved:
         (dst / "README.md").write_text(
             "# Disabled workflows\n\n"
@@ -515,6 +578,9 @@ def disable_listed_workflows(cfg: BuildConfig) -> list[str]:
 
 
 def commit_all(cfg: BuildConfig, stats: dict) -> str:
+    """Stage and commit the mirror's own additions (notice, digests, moves)
+    under the bot identity — the one commit in the mirror that is the tool's
+    and not the source's."""
     git(["add", "-A"], cfg.out)
     slug = cfg.repo_slug or "source"
     msg = (
@@ -530,6 +596,10 @@ def commit_all(cfg: BuildConfig, stats: dict) -> str:
 
 
 def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", force: bool = True) -> None:
+    """Push the built tree to the mirror repo. With `create`, a missing repo
+    is created PRIVATE — always; there is no public flag in this tool (the
+    visibility law). Phase-B (append) pushes will drop `force`; today's
+    callers are phase-A epochs."""
     url = f"https://github.com/{mirror_slug}.git"
     if create:
         probe = subprocess.run(["gh", "repo", "view", mirror_slug], capture_output=True, text=True)
@@ -544,6 +614,8 @@ def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", for
                 check=True,
             )
             print(f"created {mirror_slug} PRIVATE — flipping it public is the owner's own act, by design")
+            log.info("created %s PRIVATE (the visibility law)", mirror_slug)
+            step_summary(f"**Mirror created PRIVATE**: `{mirror_slug}` — flipping it public is the owner's own act, by design.")
     remotes = git(["remote"], out).split()
     if "mirror" in remotes:
         git(["remote", "set-url", "mirror", url], out)
@@ -583,6 +655,10 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
                         "use for publish/release workflows — keep secretless CI live")
     b.add_argument("--digest", choices=["none", "index", "per-adr"], default="none")
     b.add_argument("--digest-glob", default=DEFAULT_DIGEST_GLOB)
+    b.add_argument("--digest-style", choices=["full", "brief"], default="full",
+                   help="brief = one-sentence bullets (the ADR index summary)")
+    b.add_argument("--digest-prompt-text", default="",
+                   help="inline prompt string; wins over --digest-prompt")
     b.add_argument("--digest-model", default=DEFAULT_DIGEST_MODEL)
     b.add_argument("--digest-effort", default=DEFAULT_DIGEST_EFFORT,
                    choices=["low", "medium", "high", "xhigh", "max"])
@@ -685,6 +761,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_slug=ns.repo_slug, digest=ns.digest,
         digest_glob=ns.digest_glob, digest_model=ns.digest_model,
         digest_effort=ns.digest_effort, digest_prompt=ns.digest_prompt,
+        digest_prompt_text=ns.digest_prompt_text, digest_style=ns.digest_style,
         digest_dry_run=ns.digest_dry_run, notice=not ns.no_notice,
     )
     if ns.terms:
@@ -712,6 +789,14 @@ def main(argv: list[str] | None = None) -> int:
                    "dry_run": cfg.digest_dry_run},
         "commits_in_source": {"mixed": mixed, "record_only": rec, "code_only": code},
     }, indent=2))
+    step_summary(
+        f"**no-adrs mirror build** — history `{cfg.history}`, messages `{cfg.messages}`"
+        f"{', digest ' + cfg.digest + '/' + cfg.digest_style if cfg.digest != 'none' else ''}\n\n"
+        f"| kept | withheld | mixed commits in source |\n|---|---|---|\n"
+        f"| {stats['kept']} | {stats['stripped']} | {mixed} |\n\n"
+        f"Source `{stats['source_sha'][:12]}` → mirror `{(sha or 'uncommitted')[:12]}`. "
+        f"The notice (`{NOTICE_FILE}`) carries the full disclosure."
+    )
     return 0
 
 

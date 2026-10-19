@@ -115,8 +115,34 @@ the citation.
 
 ## Quick start
 
+The whole integration is one step — a call to this action (which is, at
+bottom, a robust wrapper around `mirror.py`, a single typed Python file you
+can read in one sitting):
+
+```yaml
+# .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
+on:
+  push: { branches: [main] }
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }        # filter mode needs full history
+      - uses: ADRs4AI/no-adrs-mirror@v1
+        with:
+          token: ${{ secrets.MIRROR_TOKEN }}
+          create_if_missing: "true"      # creates PRIVATE, always
+          history_mode: filter
+          messages: mechanical           # or map / redact — see Message tiers
+          disable_workflows: |           # publish workflows never run in a mirror
+            release.yml
+```
+
+`workflows/mirror.yml` in this repo is the same thing with every knob shown.
+
 1. Copy `workflows/mirror.yml` into your repo as
-   `.github/workflows/no-adrs-mirror.yml`.
+   `.github/workflows/no-adrs-mirror.yml` (or start from the snippet above).
 2. Add the `MIRROR_TOKEN` secret (PAT or App token able to push to the mirror;
    the default `GITHUB_TOKEN` cannot push cross-repo). Add `ANTHROPIC_API_KEY`
    only if you want digests.
