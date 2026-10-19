@@ -66,6 +66,24 @@ Options:
 **Recommendation**: (by Claude Fable 5)
 **A**, by a hair. *Rationale*: "a statement of worth, not an apology" lands the reframe's whole argument in six words, and the triplet "ship the code, declare the record, keep the reasoning" is the mode matrix made breathable; B's "turnkey" is your own word and keeps your cadence — which is why your edit beats both. *Confidence*: 0.55 — this is taste on your voice, which is yours. *If wrong*: B, or your third casting, lands with zero downstream cost; the placement (directly after the bold one-liner) holds either way.
 
+**Recommendation**: (by Mint 5, Lumbroso HQ naming counsel — the delegated strike, 2026-10-26; hub ledger №100 as twice-amended; consolidates the founder's live iteration: "expansive" grist, the clean-room ask, "several levels of my strategy… deeply analyzed," and "take a beat… not at all or gradually")
+
+**A three-tier strike, superseding the A/B binary — each surface faces its own reader (0.75; closed per the delegation, his voice overrides any line):**
+
+1. **README opener** — recruits, by changing the comparison class (the skeptic's "why isn't this open?" dissolves instead of being answered, because the true baseline is that most repositories keep no record at all):
+
+   > "Most repositories ship their code and lose their reasoning — there is nothing left to open. This Action serves the opposite discipline, where every deliberation is kept and publication is a granular choice: ship the code, declare the record, open what you rule. **Closed is still ahead of gone.**"
+
+2. **README second beat** — teaches the product's truest description, which sat under every candidate adjective:
+
+   > "Shipping and disclosing are two decisions; this Action lets them keep separate clocks — open, digest, closed, **or not yet**. 'Not yet' is a setting, not a confession."
+
+3. **DELIBERATIONS-NOTICE story** (per-mirror, where the closed question is actually asked) — carries the founder's real reason, with "live" doing the work "important" wanted to do without the rank a skeptic can mock:
+
+   > "These deliberations are kept whole and still in play — strategy analyzed in depth, across levels, that a game in progress doesn't publish. The disclosure decision keeps its own clock: not at all, later, or gradually — declared, counted, and gated. **A statement of custody, not an apology.**"
+
+*Lineage, so nothing is lost*: Pharos's A triplet lives in tier 1; B's "turnkey" cadence may re-enter at his edit; the founder's "too important" instinct survives as the potency frame ("live"); his "expansive" survives in the claim-class analysis (shape-claims outlast status-claims — a skeptic can contest importance, never extent); his "take a beat" IS tier 2's second clock. *If wrong*: every line here is release-mutable README copy — his edit beats all of it, by standing law.
+
 **ANS:** (by Jérémie)
 [Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
 
