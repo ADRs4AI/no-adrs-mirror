@@ -55,7 +55,7 @@ OK, approving Pharos' recommendation of `book` and `blue`.
 ---
 
 ### QST-STORY-OPENING: Which casting of the "too important" two sentences opens the README?
-- Status: unanswered — Pharos drafted both castings (review F2, 2026-10-17) and routed the pick to the rights-holder ("his edit beats both"); the words are his reframe, so the voice is his to choose
+- Status: answered — Pharos drafted both castings (review F2, 2026-10-17) and routed the pick to the rights-holder ("his edit beats both"); the words are his reframe, so the voice is his to choose
 - Why asking: the opening carries the whole launch-story reframe — Closed mode as the product, not the apology. Your own sentence staked this week names the stake: the process that lets people "mediate, granularly, what is public and not."
 - Need: pick a letter, edit either freely, or write a third — any shape answers
 
@@ -84,8 +84,8 @@ Options:
 
 *Lineage, so nothing is lost*: Pharos's A triplet lives in tier 1; B's "turnkey" cadence may re-enter at his edit; the founder's "too important" instinct survives as the potency frame ("live"); his "expansive" survives in the claim-class analysis (shape-claims outlast status-claims — a skeptic can contest importance, never extent); his "take a beat" IS tier 2's second clock. *If wrong*: every line here is release-mutable README copy — his edit beats all of it, by standing law.
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso, in-session, relayed by Mint 5, 2026-10-26)
+"Yes, ship those. They are excellent." — the three-tier strike is ratified as written; tiers 1–2 to the README, tier 3 to the DELIBERATIONS-NOTICE story.
 
 ---
 
