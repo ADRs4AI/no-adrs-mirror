@@ -25,10 +25,9 @@ created **private**; you make it public when you choose — the Action never doe
 
 ## Why
 
-Most repositories ship their code and lose their reasoning — there is nothing
-left to open. This Action serves the opposite discipline, where every
-deliberation is kept and publication is a granular choice: ship the code,
-declare the record, open what you rule. **Closed is still ahead of gone.**
+This Action serves a discipline where every deliberation is kept and
+publication is a granular choice: ship the code, declare the record, open what
+you rule. **Closed is still ahead of gone.**
 
 Shipping and disclosing are two decisions; this Action lets them keep separate
 clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a

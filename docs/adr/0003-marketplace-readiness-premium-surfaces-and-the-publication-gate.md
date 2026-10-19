@@ -89,6 +89,8 @@ Options:
 
 *Implementation note (Covenant 5 / Claude Fable 5, 2026-10-19, post-compaction wake)*: folded as ratified — tiers 1–2 open the README directly under the bold one-liner; tier 3 lands in `write_notice()` (every generated notice now carries the custody story) with the line regression-pinned in `tests/test_mirror.py` so it can be edited deliberately but never dropped silently. The README's sample notice shows it. 16/16 green.
 
+*Amendment (by Jérémie Lumbroso via the publication pharoscan, 16:42 UTC 2026-10-19; folded by Covenant 5)*: tier 1's first sentence ("Most repositories ship their code and lose their reasoning — there is nothing left to open.") is **cut** from the shipped README at his word — Primer 5's blathm hunt filed it as Overclaim/Medium (deletion test: the next sentence carries the contrast; "most"/"nothing left" are unsourced absolutes), and his ruling: *"Good catch. Should be saved as a blathm example case study."* The rest of tier 1 ships as ratified; the strike's full original text stays above, unedited, as the record. The case study routes to Primer's local handbook drafts (publishing frozen per the founder's stop; logging locally allowed).
+
 ---
 
 ### QST-LICENSE: What license does this repository itself carry?
