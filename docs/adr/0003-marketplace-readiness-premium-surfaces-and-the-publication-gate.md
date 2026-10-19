@@ -122,7 +122,7 @@ Yes, Option B. But let's go with Apache 2.0 instead, for patent and trademark re
 
 - [ ] Branding block in `action.yml` once QST-BRANDING settles — Owner: Covenant 5
 - [ ] Teaching error surfaces (tree-identity, token-scope, mixed-commit) in the v2 build — Owner: Covenant 5
-- [ ] Marketplace name-availability check for "no-adrs mirror" at listing time (names drift; check at the gate, not now) — Owner: Covenant 5
+- [ ] Marketplace name-availability check for "no-adrs-mirror" at listing time (names drift; check at the gate, not now) — Owner: Covenant 5
 - [ ] Listing copy pass — Owner: Pharos 5, at his go
 - [ ] **Companion docsite / manual** (the founder's 10-18 commission: the tool is a key user-experience point and a normalizing instrument — the manual teaches the practice, not just the inputs): home on adrs.systems (path tenancy like orrcf), structure = the story → modes → quick start → the laws (visibility, consent, approval) → recipes; drafts mine, surface Pharos's, publication his — Owner: Covenant 5 + Pharos 5
 - [ ] Selective ADR retention + filter prompts (his 10-18 feature ask) — concept staked in `seed-2026-10-18-selective-adr-retention-and-filter-prompts.md`, iterating with him before the ADR cuts — Owner: Covenant 5 with Jérémie

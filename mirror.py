@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""no-adrs mirror — publish a repository's code without its deliberation record.
+"""no-adrs-mirror — publish a repository's code without its deliberation record.
 
 Prototype, 2026-08-26, Covenant 5 (Claude Fable 5) at Jérémie Lumbroso's ask
 ("prototype the GitHub Action for when I'm up"). Design context: HQ ADR-0034 §4
@@ -196,7 +196,7 @@ class BuildConfig:
     out: Path
     strip: list[str] = field(default_factory=lambda: list(DEFAULT_STRIP))
     history: str = "snapshot"  # snapshot | filter
-    messages: str = "subject"  # keep | subject | scrub | map   (filter mode only)
+    messages: str = "subject"  # keep | subject | scrub | map | mechanical | redact (filter mode only)
     message_map: Path | None = None  # messages=map: JSON {original_sha: neutral line}
     redact_dict: Path | None = None  # messages=redact: JSON {terms:[], patterns:[]} (dictgen)
     disable_workflows: list[str] = field(default_factory=list)  # moved to workflows-disabled/
@@ -321,7 +321,7 @@ def build_filtered(cfg: BuildConfig) -> dict:
 
 
 def _set_mirror_identity(repo: Path) -> None:
-    git(["config", "user.name", "no-adrs mirror"], repo)
+    git(["config", "user.name", "no-adrs-mirror"], repo)
     git(["config", "user.email", "no-adrs-mirror@users.noreply.github.com"], repo)
 
 
@@ -573,7 +573,7 @@ def disable_listed_workflows(cfg: BuildConfig) -> list[str]:
     if moved:
         (dst / "README.md").write_text(
             "# Disabled workflows\n\n"
-            "These workflows were moved here by the no-adrs mirror because they "
+            "These workflows were moved here by the no-adrs-mirror Action because they "
             "require secrets or publish authority the mirror deliberately does not "
             "hold (publishing runs from the private source). Test and lint "
             "workflows remain live in `.github/workflows/`. See "
@@ -798,7 +798,7 @@ def main(argv: list[str] | None = None) -> int:
         "commits_in_source": {"mixed": mixed, "record_only": rec, "code_only": code},
     }, indent=2))
     step_summary(
-        f"**no-adrs mirror build** — history `{cfg.history}`, messages `{cfg.messages}`"
+        f"**no-adrs-mirror build** — history `{cfg.history}`, messages `{cfg.messages}`"
         f"{', digest ' + cfg.digest + '/' + cfg.digest_style if cfg.digest != 'none' else ''}\n\n"
         f"| kept | withheld | mixed commits in source |\n|---|---|---|\n"
         f"| {stats['kept']} | {stats['stripped']} | {mixed} |\n\n"

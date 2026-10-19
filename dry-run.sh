@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dry-run.sh — one command, full proof pack. Builds a no-adrs mirror of a real
+# dry-run.sh — one command, full proof pack. Builds a no-ADRs mirror of a real
 # repository LOCALLY (snapshot history, digest dry-run, nothing pushed, no API
 # call) and prints everything a reviewer needs: the strip report, the mirror's
 # single-commit log, the DELIBERATIONS-NOTICE, the tree, and a suggested README
@@ -16,7 +16,7 @@ OUT="${3:-$(mktemp -d)/mirror}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 echo "══════════════════════════════════════════════════════════════════"
-echo " no-adrs mirror — DRY-RUN PROOF"
+echo " no-adrs-mirror — DRY-RUN PROOF"
 echo " source: $SRC"
 echo " slug:   $SLUG"
 echo " out:    $OUT   (local only; nothing is pushed, no API call is made)"

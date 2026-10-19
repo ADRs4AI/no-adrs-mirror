@@ -1,4 +1,8 @@
-name: "no-adrs mirror"
+# Name form ruled by Mint №92 addendum (2026-10-19, the founder's own lean):
+# hyphenated everywhere the tool is NAMED — the raw mark, undressed (the dress
+# lives in description:). Spaced form survives only as generic prose for the
+# artifact class: "a no-ADRs mirror of your repository".
+name: "no-adrs-mirror"
 description: >-
   Publish this repository's code to a mirror repository without its deliberation
   record ("Closed Deliberations" mode, HQ ADR-0034 §4): strips docs/adr and a
@@ -48,8 +52,10 @@ inputs:
       filter mode only: map (model-written one-liners from message_map, mechanical
       fallback) | redact (original subjects, dictionary tokens replaced — needs
       redact_dict) | mechanical (type + changed paths; deterministic) | scrub
-      (constant line) | subject (first line only) | keep. Degrade law: a missing
-      companion file degrades DOWN in warmth (to mechanical), never in privacy.
+      (constant line) | subject (first line only) | keep. Degrade law: a commit
+      the map does not cover degrades DOWN in warmth (to mechanical), never to
+      its original text; a missing or unreadable companion FILE fails the build
+      (fail-closed — a config typo must not silently change the output).
       Default is scrub: measured on this house's own repos, even code-only commit
       SUBJECTS carry deliberation (HQ adr:0034 It-2) — subject is offered for repos
       with disciplined terse subjects, never as the honest default.

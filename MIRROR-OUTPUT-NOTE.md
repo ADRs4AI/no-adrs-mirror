@@ -1,6 +1,6 @@
 # Mirror output note
 
-This repository (the no-adrs mirror Action) is licensed under Apache-2.0 — see
+This repository (the no-adrs-mirror Action) is licensed under Apache-2.0 — see
 `LICENSE`. This note is a separate, plain-language grant about the Action's
 *outputs*; it is not part of the license text and is never appended to it.
 

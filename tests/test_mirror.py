@@ -1,4 +1,4 @@
-"""Tests for the no-adrs mirror prototype (Third–Fifth Directives: each test
+"""Tests for the no-adrs-mirror prototype (Third–Fifth Directives: each test
 pins a claim the README makes; run before commit).
 
     <venv>/bin/pytest tests/ -q   (from the repo root)

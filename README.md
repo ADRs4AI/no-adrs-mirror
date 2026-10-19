@@ -1,6 +1,29 @@
-# no-adrs mirror
+# no-adrs-mirror
 
-**Publish a repository's code without publishing its reasoning.**
+**A GitHub Action for a private repository: each push rebuilds a second
+repository — the mirror — with the same code, none of the deliberation record,
+and one generated file, `DELIBERATIONS-NOTICE.md`, stating what was withheld.**
+
+You work in a **private repository** that holds code *and* thinking — ADRs,
+agent inboxes, `CLAUDE.md` (a *deliberation record*, in
+[ADRs-for-AI](https://adrs.systems/) practice). Each push to `main` rebuilds
+the mirror, a **separate GitHub repository**:
+
+```text
+your-repo (PRIVATE — you work here)      your-repo-no-adrs (the mirror)
+├── src/                                 ├── src/     ← identical, byte for byte
+├── tests/                               ├── tests/   ← identical
+├── docs/adr/        ─┐                  └── DELIBERATIONS-NOTICE.md
+├── docs/inbox/       ├─ stays home           ← the ONE generated file: what
+└── CLAUDE.md, …     ─┘                         exists, what was withheld
+```
+
+Withheld by default: `docs/adr`, `docs/inbox`, `docs/vignettes`,
+`docs/handoffs`, `docs/continuity`, `docs/HANDOFF-*.md`, `CLAUDE.md`,
+`AGENTS.md`, `.claude`, `.pneumatic` (override: `strip_paths`). The mirror is
+created **private**; you make it public when you choose — the Action never does.
+
+## Why
 
 Most repositories ship their code and lose their reasoning — there is nothing
 left to open. This Action serves the opposite discipline, where every
@@ -11,146 +34,118 @@ Shipping and disclosing are two decisions; this Action lets them keep separate
 clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a
 confession.
 
-## What it does, concretely
+## The four postures (no `mode` input — each is a configuration)
 
-You work in a **private** repository that holds both your code and your
-thinking — ADRs, design notes, agent inboxes (a *deliberation record*, in
-[ADRs-for-AI](https://adrs.systems/) practice). On every push, this Action
-rebuilds a second repository from it:
-
-```text
-your-repo (private, where you work)      your-repo-no-adrs (the mirror)
-├── src/                                 ├── src/                ← identical
-├── tests/                               ├── tests/              ← identical
-├── docs/adr/        ─┐                  ├── DELIBERATIONS-NOTICE.md ← generated
-├── docs/inbox/       ├─ withheld        └── (nothing else from docs/adr,
-└── CLAUDE.md        ─┘                       docs/inbox, CLAUDE.md, …)
-```
-
-Same code, byte for byte. The record stays home. One generated file —
-`DELIBERATIONS-NOTICE.md` — says so honestly: the record exists, here is its
-size, here is what was withheld, here is how to cite it. The mirror is born
-**private**; you make it public when you choose, and the Action never does.
-
-The point is *poise*: The private repository stays the source of truth, the
-mirror stays ready, and opening the record later is one decision — not a
-migration.
-
-## The modes
-
-| Mode | What ships | What it says |
+| Posture | What the mirror holds | How you get it |
 |---|---|---|
-| **none** | Nothing — no mirror | The default state of any private repo |
-| **closed** | Code + the notice | "A record exists; it is withheld" |
-| **digest** | Code + notice + a model-written summary per ADR, each carrying its source's canonical `adr://` Address | "Here is the shape of the record; the Address is the citation" |
-| **open** | Code + the record itself | No mirror needed — flip the source repo |
+| **none** | No mirror | Don't install the Action |
+| **closed** | Code + the notice | The default run |
+| **digest** | Code + notice + a model-written summary per ADR, each carrying its source's `adr://` Address | `digest: index` (one file) or `per-adr` (one per record), plus `anthropic_api_key` |
+| **open** | Code + the record itself | Make the source repo public — no mirror needed |
 
-The notice is not optional. A mirror that hides the record's *existence* would
-be a different product; this one is built on the claim that keeping reasoning
-and disclosing that you keep it are both features.
+The notice is never optional — the Action has no input that removes it. A
+mirror that hid the record's *existence* would be a different product: keeping
+reasoning and disclosing that you keep it are both features.
 
 ## The law
 
-**The Action never changes repository visibility.** It creates a missing
-mirror **private**, and there is deliberately no input that does otherwise.
-After you make a mirror public, each successful sync publishes its newly
-selected contents immediately — which is why *what may cross* is a reviewed
-contract (see `docs/adr/0001`, QST-SYNC-CONSENT), never just the complement of
-a filename list. Making a mirror public is a visibility act reserved to the
-repo owner's own explicit, per-repo decision. Build everything up to the flip;
-the flip is human.
+**The Action never changes repository visibility.** `create_if_missing`
+creates a missing mirror **private**; there is deliberately no input that does
+otherwise. Making a mirror public is the owner's own explicit, per-repo
+decision. Build everything up to the flip; the flip is human.
 
-## Preview before anything ships (the dry run)
+- Every run rebuilds the mirror and **force-pushes** it: the mirror is output
+  — work in the source, not the mirror.
+- Once public, each sync publishes its selected contents immediately: *what
+  may cross* is a reviewed contract (`docs/adr/0001`, QST-SYNC-CONSENT), never
+  just the complement of a filename list — the first live trial found
+  record-class files outside the defaults (`proof/`). Dry-run first.
 
-A **dry run** builds the complete mirror into a local folder and pushes
-nothing: you read exactly what *would* become public — every kept file, every
-rewritten commit message, the generated notice — before anything leaves your
-machine. (In CI, setting `dry_run: "true"` does the same and uploads the built
-tree as a workflow artifact instead of pushing.)
+## Dry run: build everything, push nothing
 
-Here is a real one, against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code
-extension, a repository whose record is two-thirds of its tree):
+A **dry run** is the full build with the push skipped: the complete mirror
+tree — every kept file, every rewritten message, the notice — lands where you
+can read it; nothing leaves. Two forms:
 
-```
-files:   443 kept · 872 withheld (docs/adr, docs/inbox, docs/vignettes,
-         docs/handoffs, CLAUDE.md, AGENTS.md, .claude, .pneumatic — the
-         defaults as of that run; current defaults also withhold
-         docs/continuity and docs/HANDOFF-*.md)
-commits: 975 record-only · 617 code-only · 149 MIXED
+- **Local**: `./dry-run.sh /path/to/repo owner/slug` — prints the strip
+  report, the mirror's log, the notice. No push, no API call.
+- **In CI**: `dry_run: "true"` — the same build, uploaded as a workflow
+  artifact, not pushed.
+
+A receipted run against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code
+extension — its record is two-thirds of its tree; full transcript:
+`proof/2026-10-13-vscode-adrs4ai-dry-run.txt`):
+
+```text
+files:   455 kept · 884 withheld (that run's defaults; today's also
+         withholds docs/continuity and docs/HANDOFF-*.md)
+commits: 995 record-only · 644 code-only · 149 MIXED
 history: snapshot → one commit, zero message leakage
-digests: 44 staged (dry-run; each carries adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<n>)
+digests: 45 staged (dry run — prompts recorded, no API call)
 ```
 
-Run it yourself — one command, local only, nothing pushed, no API call:
+## History modes (why `snapshot` is the default)
 
-```bash
-./dry-run.sh /path/to/source-repo owner/slug
-```
+Stripping the record from the *tree* does not strip it from *history*: commit
+messages narrate the reasoning.
 
-## The mixed-commit metric (why `snapshot` is the default)
+- **`snapshot`** (default): the kept files at source HEAD as **one commit**.
+  No history, no messages, nothing to leak.
+- **`filter`** (via `git filter-repo`): code history kept; commits that only
+  touched the record vanish *with* their messages. What survives is the
+  **mixed commits** — code + record in one commit, the residual leak surface —
+  which is why filter mode pairs with a message tier (below).
 
-Stripping the record from the *tree* does not strip it from *history*: Commit
-messages narrate the reasoning. `filter` mode (via `git filter-repo`) prunes
-record-only commits *with* their messages — but **mixed commits** (code + record
-in one commit) survive, and their messages leak. Measured on real repositories,
-even *code-only* commit subjects carry deliberation in projects that practice
-this methodology seriously. So:
+`python3 mirror.py report --source <repo>` prints your counts (the run above:
+149 mixed) — the choice is measured, never assumed.
 
-- **`snapshot`** (default): one commit, no history, no leakage. Honest always.
-- **`filter` + `scrub`**: code history preserved, every surviving message
-  replaced. Honest, at the cost of narrative history.
-- `filter` + `subject`: offered for repos with disciplined terse subjects —
-  the `report` subcommand prints your mixed-commit count so the choice is
-  measured, never assumed.
+## Message tiers (filter mode: what surviving commits say)
 
-## Message tiers (what surviving commits say)
-
-Filter mode keeps real history; these tiers decide what each surviving commit's
-message becomes. Safety-ordered, and the degrade law is fixed: **messages may
-degrade down in warmth, never in privacy** — when a better tier is unavailable,
-the engine falls to `mechanical`, never to the original text.
-
-| Tier | Mode | What you get | Needs |
+| Tier | `message_mode` | Each surviving message becomes | Needs |
 |---|---|---|---|
-| 1 | `map` | Model-written neutral one-liners (ConventionalCommit form), keyed by original SHA; unmapped survivors fall back to tier 2 | A map file (model access to produce it) |
-| 1.5 | `redact` | Original subjects with known tokens replaced by ‹…› — names (from registries), record ids, handles, Addresses, version tags. **Recall is bounded by the dictionary**; best for terse-conventional repos | `dictgen` output |
-| 2 | `mechanical` | `type: update <paths> (N files)` — deterministic, zero egress, byte-verifiable by anyone | Nothing |
-| 3 | `scrub` | One constant line | Nothing (explicit opt-in; it reads like redaction bars) |
+| 1 | `map` | Your supplied one-liner (e.g. model-written), keyed by original SHA; commits the map misses get tier 2 | `message_map`: a `{sha: line}` JSON you produce |
+| 1.5 | `redact` | Original subjects with known tokens replaced by ‹…› — seat names, record ids, `adr://` Addresses, version tags. **Recall is bounded by the dictionary** | `redact_dict` from `dictgen` |
+| 2 | `mechanical` | `type: update <top dirs> (N files)` — keeps the original's conventional-commit type (else `chore`); deterministic, no model | Nothing |
+| 3 | `scrub` (default) | The constant line `code commit (message withheld)` | Nothing |
 
-The notice discloses the tier and its provenance (map/dictionary hash), so a
-reader always knows which kind of message they are reading. Build a dictionary
-with `mirror.py dictgen --registry agent-sessions.json --extra "<term>" --out dict.json`;
-terms match case-sensitively (seat names are often common words), patterns
-(ids, handles, Addresses) match case-insensitively.
+The degrade law is fixed: a commit the map does not cover falls to
+`mechanical`, never to its original text. `subject` and `keep` also exist for
+terse-subject repos — though measured on this house's own repos (HQ
+`adr:0034`), even *code-only* subjects carry deliberation; the default stays
+`scrub`. The notice discloses the tier in use and the
+map/dictionary hash. Build a dictionary with
+`python3 mirror.py dictgen --registry agent-sessions.json --extra "<term>" --out dict.json`
+(terms case-sensitive — seat names are often common words; patterns are not).
 
 ## The notice (what a mirror reader sees)
+
+Counts from the receipted run; prose as `write_notice` writes it today:
 
 ```markdown
 # Deliberations notice
 
 This repository is a **mirror without its deliberation record** ("Closed
-Deliberations" mode). The record exists: **44 ADRs** and **39 seeds** are
+Deliberations" mode). The record exists: **45 ADRs** and **39 seeds** are
 maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
-`8bbb7e5b9e71`), and were withheld from this copy together with 872 files.
+`e4f821910bc1`), and were withheld from this copy together with 884 files
+under: `docs/adr`, `docs/inbox`, `docs/vignettes`, …
 
 These deliberations are kept whole and still in play — strategy analyzed in
 depth, across levels, that a game in progress doesn't publish. The disclosure
 decision keeps its own clock: not at all, later, or gradually — declared,
 counted, and gated. **A statement of custody, not an apology.**
 
-**Terms**: Access to the record is governed by the terms published at
-https://adrs.systems.
+**Terms**: Access to the record is governed by the source repository's
+maintainers; its license is decided separately from this code's.
 
 **Citing the record**: each ADR has a canonical Address of the form
-`adr://v1/repo/<owner>/<repo>/adr/<number>#<anchor>`; a resolving Address is
-the citation.
+`adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<number>#<anchor>`; a resolving
+Address is the citation.
+
+History mode: `snapshot`. Generated <UTC timestamp> by no-adrs-mirror 0.1.0.
 ```
 
 ## Quick start
-
-The whole integration is one step — a call to this action (which is, at
-bottom, a robust wrapper around `mirror.py`, a single typed Python file you
-can read in one sitting):
 
 ```yaml
 # .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
@@ -161,63 +156,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }        # filter mode needs full history
+        with: { fetch-depth: 0 }     # filter mode needs full history
       - uses: ADRs4AI/no-adrs-mirror@v1
         with:
           token: ${{ secrets.MIRROR_TOKEN }}
-          create_if_missing: "true"      # creates PRIVATE, always
-          history_mode: filter
-          message_mode: mechanical       # or map / redact — see Message tiers
-          disable_workflows: |           # publish workflows never run in a mirror
-            release.yml
+          create_if_missing: "true"  # creates PRIVATE, always
+          # dry_run: "true"          # first run: read the artifact, push nothing
+          # history_mode: filter   # keep code history; see Message tiers
 ```
 
-`workflows/mirror.yml` in this repo is the same thing with every knob shown.
-
-1. Copy `workflows/mirror.yml` into your repo as
-   `.github/workflows/no-adrs-mirror.yml` (or start from the snippet above).
-2. Add the `MIRROR_TOKEN` secret (PAT or App token able to push to the mirror;
-   the default `GITHUB_TOKEN` cannot push cross-repo). Add `ANTHROPIC_API_KEY`
-   only if you want digests.
+1. Copy the snippet (or `workflows/mirror.yml` here, every knob shown) to
+   `.github/workflows/no-adrs-mirror.yml`.
+2. Add the `MIRROR_TOKEN` secret: a PAT or GitHub App token able to push to —
+   and create — the mirror (the default `GITHUB_TOKEN` cannot push
+   cross-repo). `ANTHROPIC_API_KEY` only for digests.
 3. Push to `main`. The mirror appears — private — at `<your-repo>-no-adrs`.
+
+The Action is a wrapper around `mirror.py`, a single typed Python file —
+stdlib only; `anthropic` and `git-filter-repo` are installed only when used.
 
 ## Already public? Stars survive
 
-Adopting this discipline on an existing public repository never has to cost
-its standing:
+Adopting this on an existing public repo doesn't cost its standing:
 
-- **Stars travel.** Transferring a repository carries its stars, watchers,
-  issues, and permanent redirects with it
-  ([GitHub docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository)),
-  and renames redirect the old URL — a mirror that *succeeds* a repo doesn't
-  start from zero.
-- **The inverted flow keeps your public repo in place.** For an established
-  project the designed adoption path runs the other direction: your existing
-  public repository **becomes the mirror target** — keeping its name, stars,
-  issues, and history — while a private clone becomes the deliberating source
-  where the record accrues and from which code commits flow back. Design and
-  trade-offs: [`docs/adr/0004`](docs/adr/0004-inverted-adoption-converting-an-existing-public-repo.md).
+- **Stars travel.** Transferring a repository carries its stars, watchers, and
+  issues, with permanent redirects from the old URL
+  ([GitHub docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository)).
+- **The inverted flow keeps your public repo in place**: it *becomes the
+  mirror target* — keeping its name, stars, issues — while a private clone
+  becomes the deliberating source. Trade-offs:
+  [`docs/adr/0004`](docs/adr/0004-inverted-adoption-converting-an-existing-public-repo.md).
 
 ## Inputs (the ones that matter)
 
 | Input | Default | Notes |
 |---|---|---|
-| `mirror_repo` | `<this-repo>-no-adrs` | Target `owner/repo` |
-| `strip_paths` | the record + apparatus | Newline-separated paths/globs |
-| `history_mode` | `snapshot` | or `filter` (see the metric above) |
-| `message_mode` | `scrub` | filter mode only: `map` / `redact` / `mechanical` / `scrub` / `subject` / `keep` — see Message tiers |
-| `message_map` | — | `map` mode: repo-relative path to the `{sha: line}` JSON map |
-| `redact_dict` | — | `redact` mode: repo-relative path to `dictgen` output |
-| `disable_workflows` | — | newline-separated workflow filenames moved to `.github/workflows-disabled/` in the mirror |
+| `token` | — **(required)** | PAT/App token able to push to and create the mirror; `GITHUB_TOKEN` cannot push cross-repo |
+| `mirror_repo` | `<owner>/<repo>-no-adrs` | Target repository |
+| `strip_paths` | the 10 defaults above | Newline-separated paths/globs to withhold |
+| `history_mode` | `snapshot` | or `filter` |
+| `message_mode` | `scrub` | filter mode only: `map` / `redact` / `mechanical` / `scrub` / `subject` / `keep` |
+| `message_map` | — | `map`: repo-relative path to the `{sha: line}` JSON |
+| `redact_dict` | — | `redact`: repo-relative path to `dictgen` output |
 | `digest` | `none` | `index` / `per-adr`; requires `anthropic_api_key` |
-| `digest_model` | `claude-sonnet-5` | model, prompt-hash, timestamp recorded per digest |
+| `digest_model` | `claude-sonnet-5` | each digest records model, prompt hash, timestamp |
+| `disable_workflows` | — | filenames moved to `.github/workflows-disabled/` (publish/release workflows; keep test/lint live) |
+| `terms` | see `action.yml` | one sentence: the notice's **Terms** line |
 | `create_if_missing` | `false` | creates **private**, always |
-| `dry_run` | `false` | preview: build + upload as a workflow artifact; push nothing |
+| `dry_run` | `false` | build + upload as a workflow artifact; push nothing |
 
-## Provenance
+Fine-tuning (`digest_effort`, `digest_style`, `digest_glob`, `digest_prompt`,
+`digest_prompt_text`, `python_version`): input-by-input in [`action.yml`](action.yml).
 
-Engine and design: HQ `adr:0034` (the Open Deliberations charter) — built
-2026-08-26, live-verified 2026-10-11/12, productionized 2026-10-13. Tests:
-`tests/test_mirror.py` (pytest). The digest prompt is `prompts/adr-digest.md`
-and every digest records the model, the prompt's hash, and the generation time
-— digests are pointers to the record, never substitutes for it.
+## License and provenance
+
+The Action is Apache-2.0 ([`LICENSE`](LICENSE)); files it generates **into
+your mirror** belong to the mirror's owner
+([`MIRROR-OUTPUT-NOTE.md`](MIRROR-OUTPUT-NOTE.md)). Design: HQ `adr:0034`
+(Open Deliberations) and `docs/adr/` here. Built 2026-08-26;
+productionized 2026-10-13; first live trial 2026-10-17 (`proof/`).
+Tests: `tests/test_mirror.py`. The digest prompt is
+`prompts/adr-digest.md`; every digest records model, prompt hash, and
+generation time — digests are pointers to the record, never substitutes for it.
