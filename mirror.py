@@ -492,6 +492,14 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
         + ", ".join(f"`{p}`" for p in cfg.strip)
         + ".",
         "",
+        # The notice story — ratified copy (ADR-0003 QST-STORY-OPENING, tier 3):
+        # it answers the reader standing at an actual closed mirror.
+        "These deliberations are kept whole and still in play — strategy "
+        "analyzed in depth, across levels, that a game in progress doesn't "
+        "publish. The disclosure decision keeps its own clock: not at all, "
+        "later, or gradually — declared, counted, and gated. **A statement "
+        "of custody, not an apology.**",
+        "",
         f"**Terms**: {cfg.terms}",
         "",
         f"**Citing the record**: each ADR has a canonical Address of the form "

@@ -2,6 +2,15 @@
 
 **Publish a repository's code without publishing its reasoning.**
 
+Most repositories ship their code and lose their reasoning — there is nothing
+left to open. This Action serves the opposite discipline, where every
+deliberation is kept and publication is a granular choice: ship the code,
+declare the record, open what you rule. **Closed is still ahead of gone.**
+
+Shipping and disclosing are two decisions; this Action lets them keep separate
+clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a
+confession.
+
 Projects built the ADRs-for-AI way keep a *deliberation record* — ADRs, seeds,
 inboxes, the working apparatus of human–AI collaboration — alongside their code.
 Sometimes the code is ready to be public before the record is. This action
@@ -105,6 +114,11 @@ Deliberations" mode). The record exists: **44 ADRs** and **39 seeds** are
 maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
 `8bbb7e5b9e71`), and were withheld from this copy together with 872 files.
 
+These deliberations are kept whole and still in play — strategy analyzed in
+depth, across levels, that a game in progress doesn't publish. The disclosure
+decision keeps its own clock: not at all, later, or gradually — declared,
+counted, and gated. **A statement of custody, not an apology.**
+
 **Terms**: Access to the record is governed by the terms published at
 https://adrs.systems.
 
@@ -134,7 +148,7 @@ jobs:
           token: ${{ secrets.MIRROR_TOKEN }}
           create_if_missing: "true"      # creates PRIVATE, always
           history_mode: filter
-          messages: mechanical           # or map / redact — see Message tiers
+          message_mode: mechanical       # or map / redact — see Message tiers
           disable_workflows: |           # publish workflows never run in a mirror
             release.yml
 ```
@@ -148,6 +162,23 @@ jobs:
    only if you want digests.
 3. Push to `main`. The mirror appears — private — at `<your-repo>-no-adrs`.
 
+## Already public? Stars survive
+
+Adopting this discipline on an existing public repository never has to cost
+its standing:
+
+- **Stars travel.** Transferring a repository carries its stars, watchers,
+  issues, and permanent redirects with it
+  ([GitHub docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository)),
+  and renames redirect the old URL — a mirror that *succeeds* a repo doesn't
+  start from zero.
+- **The inverted flow keeps your public repo in place.** For an established
+  project the designed adoption path runs the other direction: your existing
+  public repository **becomes the mirror target** — keeping its name, stars,
+  issues, and history — while a private clone becomes the deliberating source
+  where the record accrues and from which code commits flow back. Design and
+  trade-offs: [`docs/adr/0004`](docs/adr/0004-inverted-adoption-converting-an-existing-public-repo.md).
+
 ## Inputs (the ones that matter)
 
 | Input | Default | Notes |
@@ -155,7 +186,10 @@ jobs:
 | `mirror_repo` | `<this-repo>-no-adrs` | Target `owner/repo` |
 | `strip_paths` | the record + apparatus | Newline-separated paths/globs |
 | `history_mode` | `snapshot` | or `filter` (see the metric above) |
-| `message_mode` | `scrub` | filter mode only: `keep` / `subject` / `scrub` |
+| `message_mode` | `scrub` | filter mode only: `map` / `redact` / `mechanical` / `scrub` / `subject` / `keep` — see Message tiers |
+| `message_map` | — | `map` mode: repo-relative path to the `{sha: line}` JSON map |
+| `redact_dict` | — | `redact` mode: repo-relative path to `dictgen` output |
+| `disable_workflows` | — | newline-separated workflow filenames moved to `.github/workflows-disabled/` in the mirror |
 | `digest` | `none` | `index` / `per-adr`; requires `anthropic_api_key` |
 | `digest_model` | `claude-sonnet-5` | model, prompt-hash, timestamp recorded per digest |
 | `create_if_missing` | `false` | creates **private**, always |

@@ -87,6 +87,8 @@ Options:
 **ANS:** (by Jérémie Lumbroso, in-session, relayed by Mint 5, 2026-10-26)
 "Yes, ship those. They are excellent." — the three-tier strike is ratified as written; tiers 1–2 to the README, tier 3 to the DELIBERATIONS-NOTICE story.
 
+*Implementation note (Covenant 5 / Claude Fable 5, 2026-10-19, post-compaction wake)*: folded as ratified — tiers 1–2 open the README directly under the bold one-liner; tier 3 lands in `write_notice()` (every generated notice now carries the custody story) with the line regression-pinned in `tests/test_mirror.py` so it can be edited deliberately but never dropped silently. The README's sample notice shows it. 16/16 green.
+
 ---
 
 ### QST-LICENSE: What license does this repository itself carry?

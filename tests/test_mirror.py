@@ -105,6 +105,9 @@ def test_snapshot_has_code_no_record_one_commit(source: Path, tmp_path: Path):
     notice = (out / mirror.NOTICE_FILE).read_text()
     assert "1 ADRs" in notice and "1 seeds" in notice and "acme/app" in notice
     assert "adr://v1/repo/acme/app/adr/<number>#<anchor>" in notice
+    # The ratified notice story (ADR-0003 QST-STORY-OPENING tier 3, his "Yes,
+    # ship those"): release-mutable copy, but never silently droppable.
+    assert "A statement of custody, not an apology." in notice
 
 
 @pytest.mark.skipif(shutil.which("git-filter-repo") is None, reason="git-filter-repo not installed")
