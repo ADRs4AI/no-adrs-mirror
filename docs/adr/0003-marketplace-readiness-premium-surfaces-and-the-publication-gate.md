@@ -44,6 +44,9 @@ Options:
 **Recommendation**: (by Pharos 5, Claude Fable 5 — the routed register pass, 2026-10-17)
 **Coin: `icon: book`, `color: blue`.** *Rationale*: The icon should carry the object of care, not the mechanism — `copy` says duplication and misses the story entirely; `eye-off` makes withholding the identity (concurring with the starter's own rejection); a **closed book** says "a record exists, bound and kept" at a glance. It enacts the "too important" story rather than illustrating the plumbing, and it pre-names the family grammar: `book-open` stands ready if an Open-Deliberations sibling ever ships — the flip is, literally, a book opening. Blue stays: The record's ink across the toolkit. Three-test pass: Collision mild (documentation tools use `book`; distinctive within this product family); connotation clean (kept is not hidden); praxigenic (the glance teaches what the product protects, and the open/closed axis maps onto the mode matrix). *Confidence*: 0.75 — icon semantics are my craft, but the Marketplace renders Feather glyphs small: If `book` reads as "docs tool" at listing size to the founder's eye, that is the falsifier, not a cost. *If wrong*: Starter A (`copy` + `blue`) is the clean runner-up; nothing else changes.
 
+**Verification addendum**: (by Pharos 5, Claude Fable 5 — 2026-10-18, at the founder's catch)
+The founder, checking the glyph at primer.style/octicons, found `book` rendered OPEN — which would invert the coin. Verified with receipts: **the Actions branding set is Feather (v4.28.0), not Octicons** (GitHub's live metadata-syntax docs, confirmed 2026-10-18), and **Feather's `book` is the closed book** — the coin stands as drawn. But the catch names a standing trap, engraved here: **Octicons (GitHub's own design system) renders `book` as an OPEN book — same name, opposite state, on the exact axis this tool's story runs on.** Tripwire, bound into the listing gate's action item: at QST-LISTING-GO (and on any future GitHub migration of branding to Octicons), verify the RENDERED glyph is a closed book — by eye, never by name. If the set ever becomes Octicons, `book` must be re-coined (Octicons' closed-book glyph is `repo`; whether it's in the allowed branding subset is a check for that day). The falsifier sharpened: the name is not the glyph; the gate verifies pixels.
+
 **ANS:** (by Jérémie, after Pharos's pass)
 [Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
 
@@ -67,7 +70,7 @@ Options:
 ---
 
 ### QST-LICENSE: What license does this repository itself carry?
-- Status: unanswered — NEW founder-ball from Parallax's review (2026-10-17): the repo has no root LICENSE (API-verified), so outsiders have no permission to use, modify, or redistribute the Action at all — no outside adoption is possible without this answer, and the catch lands on the licensing seat's own repo, owned with the full irony
+- Status: answered
 - Why asking: license posture is per-repo and the rights-holder's alone (HQ `adr:0033`, It-9 doctrine: license artifacts travel by ruling, never by default).
 - Need: pick a letter (or override — any shape answers); nothing lands in the tree before your word, and the repo is private until your flip regardless
 
@@ -79,8 +82,8 @@ Options:
 **Recommendation**: (by Claude Fable 5)
 **B — MIT root plus the separate output note.** *Rationale*: A alone leaves the generated-files question to inference, and this tool's whole product is other people's repos — the note answers "whose is the notice in MY mirror?" before a stranger asks it; the pattern is already proven on the template (launch night's split restored the badge, and It-9 made the receipt doctrine law); MIT itself is standard text and ships on your go alone per QST-COUNSEL's standing shape, while the note's wording can take a counsel pass before the PUBLIC flip without blocking the private estate. *Confidence*: 0.75. *If wrong*: if counsel reads any output note as inviting more questions than it settles, A + the same sentence as plain README prose — the established fallback.
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso)
+Yes, Option B. But let's go with Apache 2.0 instead, for patent and trademark reasons, and just rigor.
 
 ---
 
