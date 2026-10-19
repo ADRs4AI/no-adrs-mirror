@@ -87,6 +87,11 @@ DEFAULT_STRIP = [
     "AGENTS.md",
     ".claude",
     ".pneumatic",
+    ".working",              # extension working substrate: drafts + error ledgers
+    ".mcp.json",             # local MCP server config (machine paths, commands)
+    # DELIBERATELY NOT STRIPPED: kintsugi.yaml + kintsugi.lock — the rights-holder,
+    # 2026-10-19: "I'm not sure about the kintsugi.yaml and lock files, since that
+    # role models our tooling." Visible pending his final word (ADR-0001 It-3).
 ]
 DEFAULT_DIGEST_GLOB = "docs/adr/[0-9]*.md"
 DEFAULT_DIGEST_MODEL = "claude-sonnet-5"
@@ -493,13 +498,13 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
         + ", ".join(f"`{p}`" for p in cfg.strip)
         + ".",
         "",
-        # The notice story — ratified copy (ADR-0003 QST-STORY-OPENING, tier 3):
-        # it answers the reader standing at an actual closed mirror.
-        "These deliberations are kept whole and still in play — strategy "
-        "analyzed in depth, across levels, that a game in progress doesn't "
-        "publish. The disclosure decision keeps its own clock: not at all, "
-        "later, or gradually — declared, counted, and gated. **A statement "
-        "of custody, not an apology.**",
+        # The notice story (ADR-0003 QST-STORY-OPENING tier 3, as revised at the
+        # rights-holder's word 2026-10-19 via Sounder 6's finding: the notice
+        # states facts about custody; it does not praise records it hasn't read).
+        "These records are kept whole. The source maintainers retain them "
+        "privately and decide whether and when to release them — not at all, "
+        "later, or gradually. The disclosure decision keeps its own clock, "
+        "and this notice declares, counts, and gates it.",
         "",
         f"**Terms**: {cfg.terms}",
         "",

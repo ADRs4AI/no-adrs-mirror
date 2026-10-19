@@ -43,6 +43,8 @@ inputs:
       AGENTS.md
       .claude
       .pneumatic
+      .working
+      .mcp.json
   history_mode:
     description: "snapshot (one commit, no history — no message leaks) | filter (git filter-repo: code history kept, record-only commits pruned WITH their messages; mixed commits survive)"
     required: false

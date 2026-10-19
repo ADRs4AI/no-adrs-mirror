@@ -21,14 +21,15 @@ your-repo (PRIVATE — you work here)      your-repo-no-adrs (the mirror)
 
 Withheld by default: `docs/adr`, `docs/inbox`, `docs/vignettes`,
 `docs/handoffs`, `docs/continuity`, `docs/HANDOFF-*.md`, `CLAUDE.md`,
-`AGENTS.md`, `.claude`, `.pneumatic` (override: `strip_paths`). The mirror is
+`AGENTS.md`, `.claude`, `.pneumatic`, `.working`, `.mcp.json` — the record
+plus the tooling's working exhaust (override: `strip_paths`). The mirror is
 created **private**; you make it public when you choose — the Action never does.
 
 ## Why
 
 This Action serves a discipline where every deliberation is kept and
-publication is a granular choice: ship the code, declare the record, open what
-you rule. **Closed is still ahead of gone.**
+publication is a granular choice: ship the code, declare the record, choose
+which records to publish. **Closed is still ahead of gone.**
 
 Shipping and disclosing are two decisions; this Action lets them keep separate
 clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a
@@ -138,10 +139,10 @@ maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
 `e4f821910bc1`), and were withheld from this copy together with 884 files
 under: `docs/adr`, `docs/inbox`, `docs/vignettes`, …
 
-These deliberations are kept whole and still in play — strategy analyzed in
-depth, across levels, that a game in progress doesn't publish. The disclosure
-decision keeps its own clock: not at all, later, or gradually — declared,
-counted, and gated. **A statement of custody, not an apology.**
+These records are kept whole. The source maintainers retain them privately and
+decide whether and when to release them — not at all, later, or gradually. The
+disclosure decision keeps its own clock, and this notice declares, counts, and
+gates it.
 
 **Terms**: Access to the record is governed by the source repository's
 maintainers; its license is decided separately from this code's.
@@ -203,7 +204,7 @@ Adopting this on an existing public repo doesn't cost its standing:
 |---|---|---|
 | `token` | — **(required)** | PAT/App token able to push to and create the mirror; `GITHUB_TOKEN` cannot push cross-repo |
 | `mirror_repo` | `<owner>/<repo>-no-adrs` | Target repository |
-| `strip_paths` | the 10 defaults above | Newline-separated paths/globs to withhold |
+| `strip_paths` | the 12 defaults above | Newline-separated paths/globs to withhold (setting this replaces the whole list) |
 | `history_mode` | `snapshot` | or `filter` |
 | `message_mode` | `scrub` | filter mode only: `map` / `redact` / `mechanical` / `scrub` / `subject` / `keep` |
 | `message_map` | — | `map`: repo-relative path to the `{sha: line}` JSON |
