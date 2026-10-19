@@ -7,6 +7,13 @@ description: >-
   record exists and was withheld.
 author: "ADRs4AI (engine: Covenant 5, 2026-08-26; productionized 2026-10-13 at the rights-holder's word)"
 
+# Ratified by the rights-holder 2026-10-18 (ADR-0003 QST-BRANDING; Pharos coin,
+# Mint №99 confirm). Feather set: `book` is the CLOSED book here — verify pixels,
+# never names, if the set ever changes (the Octicons same-name trap, engraved).
+branding:
+  icon: "book"
+  color: "blue"
+
 inputs:
   mirror_repo:
     description: "Target owner/repo. Default: this repo's name with the -no-adrs suffix."

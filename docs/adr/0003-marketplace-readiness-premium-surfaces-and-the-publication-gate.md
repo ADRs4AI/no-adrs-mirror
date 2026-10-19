@@ -28,7 +28,7 @@ His words, staked at lumbroso-hq intake: *"a legitimate GitHub action that we pu
 ## Questions
 
 ### QST-BRANDING: Icon and color for the Marketplace branding block?
-- Status: unanswered — Pharos's surface to coin, his to ratify; the block is two fields
+- Status: answered — by the rights-holder, in-file, 2026-10-18
 - Why asking: `action.yml` branding is the listing's face; name-adjacent, so it follows the naming discipline (collision + connotation + praxigenic pass).
 - Need: a pick in any shape — a feather icon says "record"; candidates below are starters, Pharos may coin better
 
@@ -47,8 +47,10 @@ Options:
 **Verification addendum**: (by Pharos 5, Claude Fable 5 — 2026-10-18, at the founder's catch)
 The founder, checking the glyph at primer.style/octicons, found `book` rendered OPEN — which would invert the coin. Verified with receipts: **the Actions branding set is Feather (v4.28.0), not Octicons** (GitHub's live metadata-syntax docs, confirmed 2026-10-18), and **Feather's `book` is the closed book** — the coin stands as drawn. But the catch names a standing trap, engraved here: **Octicons (GitHub's own design system) renders `book` as an OPEN book — same name, opposite state, on the exact axis this tool's story runs on.** Tripwire, bound into the listing gate's action item: at QST-LISTING-GO (and on any future GitHub migration of branding to Octicons), verify the RENDERED glyph is a closed book — by eye, never by name. If the set ever becomes Octicons, `book` must be re-coined (Octicons' closed-book glyph is `repo`; whether it's in the allowed branding subset is a check for that day). The falsifier sharpened: the name is not the glyph; the gate verifies pixels.
 
-**ANS:** (by Jérémie, after Pharos's pass)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**Stacked** (Mint 5, hub ledger №99, verbatim essentials per their no-local-checkout instruction; their brief carries date 2026-10-26 against the folder's 10-18 clock — folded on receipt, neither date asserted): **CONFIRMED: D — `book` + `blue` (0.8, Pharos's 0.75 raised).** The raise is a convergence Pharos could not have known when coining: the estate's awesome-list ruling (№98) struck the deliberation marks as 📖/📘/📑 with the closed book deliberately re-inked **blue** — "precisely so 'closed' never pleads guilty by color." `book`+`blue` in Feather form **is 📘**: the branding block, the awesome-list rows, and every pattern-001 surface now speak one glyph-word. Kept standing: the `book-open` family grammar, Pharos's listing-size falsifier, and the scope note refined — №92 governs names; D names neither mechanism nor subtraction but *what is protected*.
+
+**ANS:** (by Jérémie Lumbroso)
+OK, approving Pharos' recommendation of `book` and `blue`.
 
 ---
 
@@ -70,7 +72,7 @@ Options:
 ---
 
 ### QST-LICENSE: What license does this repository itself carry?
-- Status: answered
+- Status: answered — by the rights-holder, in-file, 2026-10-18
 - Why asking: license posture is per-repo and the rights-holder's alone (HQ `adr:0033`, It-9 doctrine: license artifacts travel by ruling, never by default).
 - Need: pick a letter (or override — any shape answers); nothing lands in the tree before your word, and the repo is private until your flip regardless
 

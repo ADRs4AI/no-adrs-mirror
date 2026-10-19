@@ -37,7 +37,7 @@ The design is CI-shaped and endorsed, with one sharper cut: **compare blob OIDs,
 ## Questions
 
 ### QST-ROUNDTRIP-V2: Which contribution posture ships in v2?
-- Status: unanswered — his product call; the engineering is priced below
+- Status: answered — by the rights-holder, in-file, 2026-10-18
 - Why asking: this decides what a mirror's "Pull requests" tab means, fleet-wide.
 - Need: pick a letter (or override — any shape answers)
 
@@ -51,8 +51,8 @@ Options:
 
 **Stacked** (Parallax, cross-vendor review 2026-10-17, folded by Covenant 5): **Concur B as destination, with A as the actual PUBLIC default until B's complete contract exists** — the contract being: every mirror base commit bound to its exact source SHA + profile hash + generated-path allowlist; PR validation against that mapped base (portable paths only); a real three-way merge path with conflicts surfaced, never declared impossible; untrusted PR content handled as data (no contributor code in credential-holding jobs); and precise attribution language. Two of their catches amended into this ADR's own text: (1) the invariant is *necessary, not sufficient* — tree identity proves one boundary, not that yesterday's-base PR applies to today's HEAD; (2) the promise conflict: §flow item 3 said the change returns "under the contributor's name" while history-stability permits a bot-authored sync commit — the promise is narrowed to **attribution preserved in the private source**; the mirror shows it when the sync replays author-preserving commits, and a generated-files unportability guard joins the port (Kintsugi's same-day catch: `git am` must never create mirror-only generated files in the source). Until v2 ships the contract, every mirror's notice carries "PR porting is unsupported here" rather than an open PR tab implying a staffed round trip.
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso)
+OK, approving the updated recommendation. In practice, I expect open source / closed deliberations to work like this: A team of opt-in maintainers will have access to the private repo with deliberations. I think what would be nice is that every PR could be evaluated against the existing store of ADRs. But the recommendation should be made privately, or can it be made only visible to the maintainers of the private repo, not publicly?
 
 ---
 
@@ -86,6 +86,7 @@ Options:
 - [ ] Tree-identity CI check in the Action (with a teaching failure message) — Owner: Covenant 5
 - [ ] Notice sentence (the port promise) added to the template on QST-ROUNDTRIP-V2's answer — Owner: Covenant 5
 - [ ] Port runbook (`PORTING.md`): the four commands + the bot-comment template — Owner: Covenant 5
+- [ ] **ADR-aware PR evaluation, private-visible** (his ROUNDTRIP ANS, new thread): every mirror PR evaluated against the private repo's record store; the evaluation runs source-side and surfaces ONLY to the private repo's maintainers (a check/issue there — the public PR never carries it; answer to his "can it be made only visible?": yes, by construction, because the evaluator needs the record and the record is private). Design with the retention seed's sitting — Owner: Covenant 5 with Jérémie
 
 ## Iterations
 

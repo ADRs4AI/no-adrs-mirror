@@ -49,7 +49,7 @@ Options:
 ---
 
 ### QST-SYNC-CONSENT: What does the one-time public flip authorize — every future unclassified path, or only approved roots?
-- Status: unanswered — NEW founder-ball from Parallax's cross-vendor review (P0.2, 2026-10-17): once a mirror is public, every successful sync is a publication act, and today the denylist's complement publishes automatically — a filename the policy has never classified ships the moment it exists
+- Status: answered — by the rights-holder, in-file, 2026-10-18
 - Why asking: the live trial already proved defaults cannot infer a repo's dialect (record-class files found throughout kept paths); the same blindness applies forward in time to every file not yet written.
 - Need: pick a letter (or override — any shape answers)
 
@@ -60,13 +60,13 @@ Options:
 **Recommendation**: (by Claude Fable 5, concurring with Parallax at 0.9)
 **B — fail-closed.** *Rationale*: this is the gated-mode trust posture applied to the tool's own output boundary — "what may cross" should be a first-class contract, not the complement of a filename list; approving roots once keeps it one decision rather than one click per file, and a stopped sync is a cheap, legible failure where a leaked path is an irreversible one (the reversibility asymmetry that governs this whole lane). *Confidence*: 0.85. *If wrong*: real adopters show a complete public-root profile is less reviewable than the denylist — then A with a mandatory new-path report in the sync log, which preserves the review moment without the stop.
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso)
+Yes, approving Option B. Fail-closed, such that specific files must be opted-in, potential by the models building themselves. The documentation for this needs to be clearly accessible, i.e., in the `$GITHUB_STEP_SUMMARY` or something like that, and maybe the fail-close emits a message towards documentation (perhaps even of the associated handbook, cc: Pharos 5 of ADRs4AI).
 
 ---
 
 ### QST-DIGEST-APPROVAL: May a changed digest publish unattended, or does it stage for human approval?
-- Status: unanswered — NEW founder-ball from Parallax's review (2026-10-17): digest mode writes model output straight into the next public commit; generation is not declassification
+- Status: answered — by the rights-holder, in-file, 2026-10-18
 - Why asking: *"A model may draft the public boundary, but should not silently become the authority that moves it"* (Parallax). The digest's one permitted verbatim sentence and preserved names are exactly the content whose publication wants a human moment; this is the mirror-scale instance of the house's own publication gate.
 - Need: pick a letter (or override — any shape answers)
 
@@ -77,13 +77,15 @@ Options:
 **Recommendation**: (by Claude Fable 5, concurring with Parallax at 0.9)
 **B — staged by default, opt-in to unattended.** *Rationale*: it is the digest-as-duty design (the gated mode's own shape: disclosure mandatory, text at the owner's tempo) carried to the artifact level; caching makes the steady state zero-touch, so the approval moment costs attention only when the boundary actually moved — which is precisely when attention is owed. *Confidence*: 0.85. *If wrong*: a record class with a human-approved prompt + validator demonstrating every permissible output is pre-authorized — then A for that class, recorded.
 
-**ANS:** (by Jérémie)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Jérémie Lumbroso)
+Yes, Option B sounds about right: Staged by default, with the ability to opt-in to automation. Additionally the approval process should be seamless. I think on GitHub requiring a human approver to gate a workflow is one way to do it? I wonder if it's the most seamless? Probably? The most normal?
 
 ---
 
 ## Action Items
 
+- [ ] **Fail-close must teach where the runner reads** (his SYNC-CONSENT ANS): a stopped sync writes the unclassified-path list + the remedy into `$GITHUB_STEP_SUMMARY`, and the message links the handbook's consent page — handbook anchor: Pharos 5 (docsite commission) — Owner: Covenant 5
+- [ ] **Digest staging mechanism** (his DIGEST-APPROVAL ANS): GitHub-native — the publish step runs in an `environment` with required reviewers, so approval is one click in GitHub's own UI (the most normal shape; his instinct confirmed) — Owner: Covenant 5
 - [ ] v2: `sync` input (`one-shot` default | `synced`) + the private-side workflow template for synced mode — Owner: Covenant 5
 - [ ] README security story (token scoping, per QST-TOKEN-KIND's answer) — Owner: Covenant 5
 - [ ] Strip/include profile home in `kintsugi.yaml` zones (revival on the history word) — Owner: Kintsugi 5
