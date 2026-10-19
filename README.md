@@ -1,12 +1,13 @@
 # no-adrs-mirror
 
 **A GitHub Action for a private repository: each push rebuilds a second
-repository — the mirror — with the same code, none of the deliberation record,
-and one generated file, `DELIBERATIONS-NOTICE.md`, stating what was withheld.**
+repository — the mirror — with the same code, the configured record paths
+removed, and one generated file, `DELIBERATIONS-NOTICE.md`, stating what was
+withheld.**
 
-You work in a **private repository** that holds code *and* thinking — ADRs,
-agent inboxes, `CLAUDE.md` (a *deliberation record*, in
-[ADRs-for-AI](https://adrs.systems/) practice). Each push to `main` rebuilds
+You work in a **private repository** that holds code *and* thinking — ADRs
+(architecture decision records), agent inboxes, `CLAUDE.md` (a *deliberation
+record*, in [ADRs-for-AI](https://adrs.systems/) practice). Each push to `main` rebuilds
 the mirror, a **separate GitHub repository**:
 
 ```text
@@ -55,23 +56,30 @@ decision. Build everything up to the flip; the flip is human.
 
 - Every run rebuilds the mirror and **force-pushes** it: the mirror is output
   — work in the source, not the mirror.
-- Once public, each sync publishes its selected contents immediately: *what
-  may cross* is a reviewed contract (`docs/adr/0001`, QST-SYNC-CONSENT), never
-  just the complement of a filename list — the first live trial found
-  record-class files outside the defaults (`proof/`). Dry-run first.
+- The Action copies tracked files outside `strip_paths` — **reviewing what
+  crosses is the operator's job**, and once a mirror is public, each sync
+  publishes its selected contents immediately. Defaults cannot know your
+  repo's dialect: the first recorded trial found record-class files outside
+  them (`proof/`). Dry-run first. (The design for making this a reviewed,
+  fail-closed contract is `docs/adr/0001`, QST-SYNC-CONSENT — designed, not
+  yet enforced in code.)
 
-## Dry run: build everything, push nothing
+## Preview the mirror (dry run)
 
-A **dry run** is the full build with the push skipped: the complete mirror
-tree — every kept file, every rewritten message, the notice — lands where you
-can read it; nothing leaves. Two forms:
+A **dry run** builds the complete mirror for inspection and pushes nothing to
+the mirror repository. Previews make **no model calls** either: when digests
+are enabled, their prompts are staged in place of summaries, so you read what
+*would* be sent before anything is. Two forms:
 
-- **Local**: `./dry-run.sh /path/to/repo owner/slug` — prints the strip
-  report, the mirror's log, the notice. No push, no API call.
-- **In CI**: `dry_run: "true"` — the same build, uploaded as a workflow
-  artifact, not pushed.
+- **Local**: `./dry-run.sh /path/to/repo owner/slug [out-dir]` — a snapshot
+  preview; prints the strip report, the mirror's log, the notice, and the
+  `out:` folder holding the full tree.
+- **In CI**: `dry_run: "true"` — runs your configured build and uploads it as
+  the `no-adrs-mirror` artifact (hidden files included — the rewritten `.git`
+  history among them) in the workflow run's **Artifacts** section; nothing is
+  pushed.
 
-A receipted run against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code
+A recorded trial against `ADRs4AI/vscode-adrs4ai` (the ADRs-for-AI VS Code
 extension — its record is two-thirds of its tree; full transcript:
 `proof/2026-10-13-vscode-adrs4ai-dry-run.txt`):
 
@@ -107,8 +115,8 @@ messages narrate the reasoning.
 | 2 | `mechanical` | `type: update <top dirs> (N files)` — keeps the original's conventional-commit type (else `chore`); deterministic, no model | Nothing |
 | 3 | `scrub` (default) | The constant line `code commit (message withheld)` | Nothing |
 
-The degrade law is fixed: a commit the map does not cover falls to
-`mechanical`, never to its original text. `subject` and `keep` also exist for
+If the map has no entry for a commit, the `mechanical` message is used — never
+the original text. `subject` and `keep` also exist for
 terse-subject repos — though measured on our own repositories, even
 *code-only* subjects carry deliberation; the default stays
 `scrub`. The notice discloses the tier in use and the
@@ -161,7 +169,7 @@ jobs:
         with:
           token: ${{ secrets.MIRROR_TOKEN }}
           create_if_missing: "true"  # creates PRIVATE, always
-          # dry_run: "true"          # first run: read the artifact, push nothing
+          dry_run: "true"            # first run: preview only — nothing pushes
           # history_mode: filter   # keep code history; see Message tiers
 ```
 
@@ -170,7 +178,9 @@ jobs:
 2. Add the `MIRROR_TOKEN` secret: a PAT or GitHub App token able to push to —
    and create — the mirror (the default `GITHUB_TOKEN` cannot push
    cross-repo). `ANTHROPIC_API_KEY` only for digests.
-3. Push to `main`. The mirror appears — private — at `<your-repo>-no-adrs`.
+3. Push to `main`. The first run uploads a **preview artifact** — read it,
+   then remove the `dry_run` line (or set it `"false"`): the mirror appears —
+   private — at `<your-repo>-no-adrs`.
 
 The Action is a wrapper around `mirror.py`, a single typed Python file —
 stdlib only; `anthropic` and `git-filter-repo` are installed only when used.

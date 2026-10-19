@@ -161,6 +161,7 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         HISTORY_MODE: ${{ inputs.history_mode }}
         MESSAGE_MODE: ${{ inputs.message_mode }}
+        DRY_RUN: ${{ inputs.dry_run }}
         MESSAGE_MAP: ${{ inputs.message_map }}
         REDACT_DICT: ${{ inputs.redact_dict }}
         DIGEST: ${{ inputs.digest }}
@@ -186,6 +187,9 @@ runs:
         if [ -n "$DIGEST_PROMPT" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/$DIGEST_PROMPT"); fi
         if [ -n "$MESSAGE_MAP" ]; then args+=(--message-map "$GITHUB_WORKSPACE/$MESSAGE_MAP"); fi
         if [ -n "$REDACT_DICT" ]; then args+=(--redact-dict "$GITHUB_WORKSPACE/$REDACT_DICT"); fi
+        # A preview must not egress: dry_run stages digest prompts instead of
+        # calling the model (Sounder 6's boundary finding, 2026-10-19).
+        if [ "$DRY_RUN" = "true" ]; then args+=(--digest-dry-run); fi
         python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
 
     - name: Upload (dry run)
@@ -194,6 +198,10 @@ runs:
       with:
         name: no-adrs-mirror
         path: ${{ runner.temp }}/mirror
+        # Without this the artifact silently omits dotfiles AND the rewritten
+        # .git history — the exact things a preview exists to let you inspect
+        # (Sounder 6's artifact finding, 2026-10-19; upstream default is false).
+        include-hidden-files: true
 
     - name: Push to the mirror
       if: ${{ inputs.dry_run != 'true' }}
