@@ -74,7 +74,7 @@ inputs:
     required: false
     default: "none"
   digest_model:
-    description: "Model for digests. Jérémie's pick: claude-sonnet-5."
+    description: "Model for digests."
     required: false
     default: "claude-sonnet-5"
   digest_effort:
