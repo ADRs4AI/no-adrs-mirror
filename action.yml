@@ -162,6 +162,20 @@ runs:
     # substitution and a composite-action injection vector (the house's own
     # quote() class, Actions costume). Defense uniform: all inputs, even
     # enum-shaped ones, no exceptions to audit later.
+    - name: Preflight
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        # Fail fast and teach: an empty token otherwise surfaces as a raw
+        # traceback AFTER the whole build (first dogfood run, 2026-10-20).
+        if [ "$DRY_RUN" != "true" ] && [ -z "$TOKEN" ]; then
+          echo "**Stopped before building**: the \`token\` input is empty. Set a repository secret (e.g. \`MIRROR_TOKEN\`) holding a PAT or App token able to push to — and create — the mirror, or run with \`dry_run: \"true\"\` (no token needed to preview)." >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::token input is empty — set the MIRROR_TOKEN secret (or use dry_run: \"true\" to preview without one)"
+          exit 1
+        fi
+
     - name: Install tooling
       shell: bash
       env:
