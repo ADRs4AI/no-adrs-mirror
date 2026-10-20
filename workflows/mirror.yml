@@ -33,6 +33,12 @@ concurrency:
 
 jobs:
   mirror:
+    # Staged digest publication (ADR-0001 QST-DIGEST-APPROVAL, answer B): to
+    # make model-written digests wait for a human eye before any public push,
+    # run this job in a GitHub ENVIRONMENT with required reviewers —
+    #   environment: mirror-publish
+    # (Settings → Environments → mirror-publish → Required reviewers). Every
+    # sync then pauses for approval exactly at the publish boundary.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

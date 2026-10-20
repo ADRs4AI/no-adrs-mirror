@@ -35,19 +35,6 @@ Shipping and disclosing are two decisions; this Action lets them keep separate
 clocks — open, digest, closed, **or not yet**. "Not yet" is a setting, not a
 confession.
 
-## The four postures (no `mode` input — each is a configuration)
-
-| Posture | What the mirror holds | How you get it |
-|---|---|---|
-| **none** | No mirror | Don't install the Action |
-| **closed** | Code + the notice | The default run |
-| **digest** | Code + notice + a model-written summary per ADR, each carrying its source's `adr://` Address | `digest: index` (one file) or `per-adr` (one per record), plus `anthropic_api_key` |
-| **open** | Code + the record itself | Make the source repo public — no mirror needed |
-
-The notice is never optional — the Action has no input that removes it. A
-mirror that hid the record's *existence* would be a different product: keeping
-reasoning and disclosing that you keep it are both features.
-
 ## The law
 
 **The Action never changes repository visibility.** `create_if_missing`
@@ -61,9 +48,10 @@ decision. Build everything up to the flip; the flip is human.
   crosses is the operator's job**, and once a mirror is public, each sync
   publishes its selected contents immediately. Defaults cannot know your
   repo's dialect: the first recorded trial found record-class files outside
-  them (`proof/`). Dry-run first. (The design for making this a reviewed,
-  fail-closed contract is `docs/adr/0001`, QST-SYNC-CONSENT — designed, not
-  yet enforced in code.)
+  them (`proof/`). Dry-run first. And the contract is enforceable: declare
+  `approved_paths` and **any kept path outside them stops the sync before
+  anything is written**; a PUBLIC mirror refuses to push until they are
+  declared (`docs/adr/0001`, QST-SYNC-CONSENT — fail-closed by design).
 
 ## Preview the mirror (dry run)
 
@@ -91,6 +79,83 @@ commits: 995 record-only · 644 code-only · 149 MIXED
 history: snapshot → one commit, zero message leakage
 digests: 45 staged (dry run — prompts recorded, no API call)
 ```
+
+## Quick start
+
+```yaml
+# .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
+on:
+  push: { branches: [main] }
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }     # filter mode needs full history
+      - uses: ADRs4AI/no-adrs-mirror@v1
+        with:
+          token: ${{ secrets.MIRROR_TOKEN }}
+          create_if_missing: "true"  # creates PRIVATE, always
+          dry_run: "true"            # first run: preview only — nothing pushes
+          # approved_paths: |        # required once the mirror is PUBLIC (fail-closed)
+          #   src
+          #   README.md
+          # history_mode: filter   # keep code history; see Message tiers
+```
+
+1. Copy the snippet (or `workflows/mirror.yml` here, every knob shown) to
+   `.github/workflows/no-adrs-mirror.yml`.
+2. Add the `MIRROR_TOKEN` secret: a PAT or GitHub App token able to push to —
+   and create — the mirror (the default `GITHUB_TOKEN` cannot push
+   cross-repo). `ANTHROPIC_API_KEY` only for digests.
+3. Push to `main`. The first run uploads a **preview artifact** — read it,
+   then remove the `dry_run` line (or set it `"false"`): the mirror appears —
+   private — at `<your-repo>-no-adrs`.
+
+The Action is a wrapper around `mirror.py`, a single typed Python file —
+stdlib only; `anthropic` and `git-filter-repo` are installed only when used.
+
+## The notice (what a mirror reader sees)
+
+Counts from the receipted run; prose as `write_notice` writes it today:
+
+```markdown
+# Deliberations notice
+
+This repository is a **mirror without its deliberation record** ("Closed
+Deliberations" mode — ADRs-for-AI practice: https://adrs.systems). The record
+exists: **45 ADRs** and **39 seeds** (early-stage records) are
+maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
+`e4f821910bc1`), and were withheld from this copy together with 884 files
+under: `docs/adr`, `docs/inbox`, `docs/vignettes`, …
+
+These records are kept whole. The source maintainers retain them privately and
+decide whether and when to release them — not at all, later, or gradually. The
+disclosure decision keeps its own clock, and this notice declares, counts, and
+gates it.
+
+**Terms**: Access to the record is governed by the source repository's
+maintainers; its license is decided separately from this code's.
+
+**Citing the record**: each ADR has a canonical Address of the form
+`adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<number>#<anchor>`; a resolving
+Address is the citation.
+
+History mode: `snapshot`. Generated <UTC timestamp> by no-adrs-mirror 0.2.0.
+```
+
+## The four postures (no `mode` input — each is a configuration)
+
+| Posture | What the mirror holds | How you get it |
+|---|---|---|
+| **none** | No mirror | Don't install the Action |
+| **closed** | Code + the notice | The default run |
+| **digest** | Code + notice + a model-written summary per ADR, each carrying its source's `adr://` Address | `digest: index` (one file) or `per-adr` (one per record), plus `anthropic_api_key` |
+| **open** | Code + the record itself | Make the source repo public — no mirror needed |
+
+The notice is never optional — the Action has no input that removes it. A
+mirror that hid the record's *existence* would be a different product: keeping
+reasoning and disclosing that you keep it are both features.
 
 ## History modes (why `snapshot` is the default)
 
@@ -125,67 +190,6 @@ map/dictionary hash. Build a dictionary with
 `python3 mirror.py dictgen --registry agent-sessions.json --extra "<term>" --out dict.json`
 (terms case-sensitive — seat names are often common words; patterns are not).
 
-## The notice (what a mirror reader sees)
-
-Counts from the receipted run; prose as `write_notice` writes it today:
-
-```markdown
-# Deliberations notice
-
-This repository is a **mirror without its deliberation record** ("Closed
-Deliberations" mode — ADRs-for-AI practice: https://adrs.systems). The record
-exists: **45 ADRs** and **39 seeds** (early-stage records) are
-maintained alongside the source at `ADRs4AI/vscode-adrs4ai` (source commit
-`e4f821910bc1`), and were withheld from this copy together with 884 files
-under: `docs/adr`, `docs/inbox`, `docs/vignettes`, …
-
-These records are kept whole. The source maintainers retain them privately and
-decide whether and when to release them — not at all, later, or gradually. The
-disclosure decision keeps its own clock, and this notice declares, counts, and
-gates it.
-
-**Terms**: Access to the record is governed by the source repository's
-maintainers; its license is decided separately from this code's.
-
-**Citing the record**: each ADR has a canonical Address of the form
-`adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<number>#<anchor>`; a resolving
-Address is the citation.
-
-History mode: `snapshot`. Generated <UTC timestamp> by no-adrs-mirror 0.1.0.
-```
-
-## Quick start
-
-```yaml
-# .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
-on:
-  push: { branches: [main] }
-jobs:
-  mirror:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }     # filter mode needs full history
-      - uses: ADRs4AI/no-adrs-mirror@v1
-        with:
-          token: ${{ secrets.MIRROR_TOKEN }}
-          create_if_missing: "true"  # creates PRIVATE, always
-          dry_run: "true"            # first run: preview only — nothing pushes
-          # history_mode: filter   # keep code history; see Message tiers
-```
-
-1. Copy the snippet (or `workflows/mirror.yml` here, every knob shown) to
-   `.github/workflows/no-adrs-mirror.yml`.
-2. Add the `MIRROR_TOKEN` secret: a PAT or GitHub App token able to push to —
-   and create — the mirror (the default `GITHUB_TOKEN` cannot push
-   cross-repo). `ANTHROPIC_API_KEY` only for digests.
-3. Push to `main`. The first run uploads a **preview artifact** — read it,
-   then remove the `dry_run` line (or set it `"false"`): the mirror appears —
-   private — at `<your-repo>-no-adrs`.
-
-The Action is a wrapper around `mirror.py`, a single typed Python file —
-stdlib only; `anthropic` and `git-filter-repo` are installed only when used.
-
 ## Already public? Stars survive
 
 Adopting this on an existing public repo doesn't cost its standing:
@@ -205,6 +209,8 @@ Adopting this on an existing public repo doesn't cost its standing:
 | `token` | — **(required)** | PAT/App token able to push to and create the mirror; `GITHUB_TOKEN` cannot push cross-repo |
 | `mirror_repo` | `<owner>/<repo>-no-adrs` | Target repository |
 | `strip_paths` | the 12 defaults above | Newline-separated paths/globs to withhold (setting this replaces the whole list) |
+| `additional_strip_paths` | — | Newline-separated paths/globs **added** to the list — withhold more without re-declaring the defaults |
+| `approved_paths` | — | Fail-closed consent roots: kept files outside them stop the sync; **required once the mirror is public** |
 | `history_mode` | `snapshot` | or `filter` |
 | `message_mode` | `scrub` | filter mode only: `map` / `redact` / `mechanical` / `scrub` / `subject` / `keep` |
 | `message_map` | — | `map`: repo-relative path to the `{sha: line}` JSON |

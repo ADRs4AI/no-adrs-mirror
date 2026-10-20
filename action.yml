@@ -45,6 +45,23 @@ inputs:
       .pneumatic
       .working
       .mcp.json
+  additional_strip_paths:
+    description: >-
+      Newline-separated paths/globs ADDED to the strip list (additive — never
+      replaces the defaults or strip_paths; use this to withhold more without
+      re-declaring the whole list).
+    required: false
+    default: ""
+  approved_paths:
+    description: >-
+      Fail-closed path consent (ADR-0001 QST-SYNC-CONSENT, answer B):
+      newline-separated roots that kept files MAY live under. Any kept path
+      outside every root stops the build before anything is written. Required
+      once the mirror is PUBLIC: a public mirror with no approved_paths fails
+      the push step and prints the roots it would need — approve them
+      deliberately, once, and new paths can never ride a sync unreviewed.
+    required: false
+    default: ""
   history_mode:
     description: "snapshot (one commit, no history — no message leaks) | filter (git filter-repo: code history kept, record-only commits pruned WITH their messages; mixed commits survive)"
     required: false
@@ -174,6 +191,8 @@ runs:
         DIGEST_STYLE: ${{ inputs.digest_style }}
         DIGEST_PROMPT_TEXT: ${{ inputs.digest_prompt_text }}
         STRIP_PATHS: ${{ inputs.strip_paths }}
+        ADDITIONAL_STRIP_PATHS: ${{ inputs.additional_strip_paths }}
+        APPROVED_PATHS: ${{ inputs.approved_paths }}
         DISABLE_WORKFLOWS: ${{ inputs.disable_workflows }}
         TERMS: ${{ inputs.terms }}
       run: |
@@ -185,6 +204,8 @@ runs:
               --digest-style "$DIGEST_STYLE" --digest-prompt-text "$DIGEST_PROMPT_TEXT" \
               --repo-slug "$GITHUB_REPOSITORY" --terms "$TERMS")
         while IFS= read -r p; do [ -n "$p" ] && args+=(--strip "$p"); done <<< "$STRIP_PATHS"
+        while IFS= read -r p; do [ -n "$p" ] && args+=(--additional-strip "$p"); done <<< "$ADDITIONAL_STRIP_PATHS"
+        while IFS= read -r p; do [ -n "$p" ] && args+=(--approved-root "$p"); done <<< "$APPROVED_PATHS"
         while IFS= read -r w; do [ -n "$w" ] && args+=(--disable-workflow "$w"); done <<< "$DISABLE_WORKFLOWS"
         if [ -n "$DIGEST_PROMPT" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/$DIGEST_PROMPT"); fi
         if [ -n "$MESSAGE_MAP" ]; then args+=(--message-map "$GITHUB_WORKSPACE/$MESSAGE_MAP"); fi
@@ -212,8 +233,24 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         MIRROR_REPO: ${{ inputs.mirror_repo }}
         CREATE_IF_MISSING: ${{ inputs.create_if_missing }}
+        APPROVED_PATHS: ${{ inputs.approved_paths }}
       run: |
         set -euo pipefail
+        # Fail-closed bootstrap (QST-SYNC-CONSENT B): a PUBLIC mirror with no
+        # declared approved_paths never receives a push — the step fails and
+        # prints exactly the roots a deliberate approval would need. Private
+        # mirrors stay ungated (staging freedom; publication is the boundary).
+        priv="$(gh api "repos/$MIRROR_REPO" --jq .private 2>/dev/null || echo true)"
+        if [ "$priv" = "false" ] && [ -z "$(printf '%s' "$APPROVED_PATHS" | tr -d '[:space:]')" ]; then
+          tops="$(cd "$RUNNER_TEMP/mirror" && ls -A | grep -v '^\.git$' | sort | tr '\n' ' ')"
+          {
+            echo "**Push stopped (fail-closed)**: the mirror \`$MIRROR_REPO\` is PUBLIC and no \`approved_paths\` are declared."
+            echo ""
+            echo "Review the built tree (run once with \`dry_run: \"true\"\`), then declare the roots you approve — this build's top-level entries: \`$tops\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::public mirror without approved_paths — declare the roots (this build's tops: $tops)"
+          exit 1
+        fi
         git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
         create=""; [ "$CREATE_IF_MISSING" = "true" ] && create="--create"
         python "${{ github.action_path }}/mirror.py" push --out "$RUNNER_TEMP/mirror" --mirror "$MIRROR_REPO" $create

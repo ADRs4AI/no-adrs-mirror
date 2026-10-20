@@ -277,3 +277,40 @@ def test_cli_report(source: Path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert '"mixed": 1' in out and '"record_only": 1' in out
+
+
+def test_approved_roots_gate_fails_closed(source: Path, tmp_path: Path):
+    # ADR-0001 QST-SYNC-CONSENT (answer B): a kept path outside the approved
+    # roots stops the build BEFORE anything is written — a new path never
+    # rides a sync unreviewed. The fixture keeps src/ and README-less tops,
+    # so approving only "src" must trip on nothing-else-kept... the fixture
+    # also keeps docs/README-class files; approve src alone and expect a stop.
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out",
+                             repo_slug="acme/app", approved_roots=["src"])
+    kept, _ = mirror.partition(mirror.tracked_files(source), cfg.strip)
+    outside = [p for p in kept if not p.startswith("src/")]
+    assert outside, "fixture must keep something outside src/ for this test"
+    with pytest.raises(RuntimeError, match="approved-paths gate"):
+        mirror.check_approved(cfg)
+    assert not (tmp_path / "out").exists()  # nothing was written
+
+
+def test_approved_roots_gate_passes_when_covered(source: Path, tmp_path: Path):
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app")
+    kept, _ = mirror.partition(mirror.tracked_files(source), cfg.strip)
+    tops = sorted({p.split("/")[0] for p in kept})
+    cfg.approved_roots = tops
+    mirror.check_approved(cfg)  # must not raise
+
+
+def test_additional_strip_is_additive(source: Path, tmp_path: Path, capsys):
+    # Parallax P0.1: --additional-strip appends to the defaults instead of
+    # replacing them — docs/adr (a default) AND src/queue.py (the addition)
+    # must both be stripped in the same run.
+    rc = mirror.main(["build", "--source", str(source), "--out", str(tmp_path / "out"),
+                      "--repo-slug", "acme/app", "--additional-strip", "src/queue.py",
+                      "--no-notice", "--no-commit"])
+    assert rc == 0
+    assert (tmp_path / "out" / "src" / "app.py").exists()
+    assert not (tmp_path / "out" / "src" / "queue.py").exists()   # the addition
+    assert not (tmp_path / "out" / "docs" / "adr").exists()       # defaults kept

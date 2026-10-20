@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # Operator-facing narration goes through `log` (stderr; stdout stays the
 # machine interface — the JSON result). On a GitHub runner, anything worth a
@@ -215,6 +215,7 @@ class BuildConfig:
     digest_prompt_text: str = ""  # inline prompt; wins over digest_prompt when set
     digest_style: str = "full"  # full | brief (one-sentence bullets — the ADR index summary)
     digest_dry_run: bool = False
+    approved_roots: list[str] = field(default_factory=list)  # fail-closed path consent
     notice: bool = True
     # "Governed by", never "available under": in closed mode the record is
     # precisely NOT available, and the notice must not promise what the mode
@@ -223,6 +224,37 @@ class BuildConfig:
         "Access to the record is governed by the source repository's "
         "maintainers; its license is decided separately from this code's."
     )
+
+
+def check_approved(cfg: BuildConfig) -> None:
+    """Fail-closed path-consent gate (ADR-0001 QST-SYNC-CONSENT, the answered
+    B): with approved roots declared, any kept path OUTSIDE them stops the
+    build before anything is written — a NEW path never rides a sync
+    unreviewed. No roots declared = no gate (the action layer decides when
+    declaring them is mandatory, e.g. for a public mirror)."""
+    if not cfg.approved_roots:
+        return
+    kept, _ = partition(tracked_files(cfg.source), cfg.strip)
+    roots = [r.strip().strip("/") for r in cfg.approved_roots if r.strip()]
+
+    def _ok(p: str) -> bool:
+        return any(p == r or p.startswith(r + "/") for r in roots)
+
+    new = sorted(p for p in kept if not _ok(p))
+    if new:
+        tops = sorted({p.split("/")[0] for p in new})
+        step_summary(
+            f"**Sync stopped (fail-closed)**: {len(new)} kept path(s) fall outside "
+            "the approved roots — new top-level entries: "
+            + ", ".join(f"`{t}`" for t in tops)
+            + ". Review them, then extend `approved_paths` (or strip them). "
+            "Nothing was built or pushed."
+        )
+        raise RuntimeError(
+            f"approved-paths gate: {len(new)} kept path(s) outside the approved "
+            f"roots (new top-level entries: {', '.join(tops)}); "
+            f"first: {', '.join(new[:5])}"
+        )
 
 
 def build_snapshot(cfg: BuildConfig) -> dict:
@@ -664,6 +696,10 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
                    help="messages=map: JSON file of {original_sha: neutral line}")
     b.add_argument("--redact-dict", type=Path, default=None,
                    help="messages=redact: dictionary JSON from the dictgen subcommand")
+    b.add_argument("--additional-strip", action="append", default=[], dest="additional_strip",
+                   help="pattern appended to the strip list (defaults or --strip) — additive, never replacing")
+    b.add_argument("--approved-root", action="append", default=[], dest="approved_roots",
+                   help="fail-closed consent gate: a kept path outside every approved root stops the build")
     b.add_argument("--disable-workflow", action="append", default=[], dest="disable_workflows",
                    help="workflow filename to move to .github/workflows-disabled/ (repeatable); "
                         "use for publish/release workflows — keep secretless CI live")
@@ -755,6 +791,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     strip = normalize_patterns(ns.strip) if ns.strip else list(DEFAULT_STRIP)
+    # Additive semantics (Parallax P0.1): --additional-strip appends to the
+    # base list (defaults or an explicit --strip set) instead of replacing it.
+    if getattr(ns, "additional_strip", None):
+        strip += normalize_patterns(ns.additional_strip)
     source = ns.source.resolve()
     if ns.cmd == "report":
         kept, stripped = partition(tracked_files(source), strip)
@@ -777,9 +817,11 @@ def main(argv: list[str] | None = None) -> int:
         digest_effort=ns.digest_effort, digest_prompt=ns.digest_prompt,
         digest_prompt_text=ns.digest_prompt_text, digest_style=ns.digest_style,
         digest_dry_run=ns.digest_dry_run, notice=not ns.no_notice,
+        approved_roots=ns.approved_roots,
     )
     if ns.terms:
         cfg.terms = ns.terms
+    check_approved(cfg)  # fail-closed, before anything is written
     stats = build_filtered(cfg) if cfg.history == "filter" else build_snapshot(cfg)
     digest_stats = None
     if cfg.digest != "none":
