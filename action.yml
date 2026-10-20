@@ -3,12 +3,11 @@
 # lives in description:). Spaced form survives only as generic prose for the
 # artifact class: "a no-ADRs mirror of your repository".
 name: "no-adrs-mirror"
+# Marketplace caps this field at 125 characters (validator, 2026-10-19);
+# the depth lives in the README. Dress register per Mint's №92 mechanics.
 description: >-
-  Publish this repository's code to a mirror repository without its deliberation
-  record ("Closed Deliberations" mode): strips docs/adr and a
-  parameterized list of other paths, optionally adds model-written digests of
-  each ADR, and always adds DELIBERATIONS-NOTICE.md — the honest badge that the
-  record exists and was withheld.
+  Publish a repository's code to a mirror without its deliberation record —
+  the withholding declared in a generated notice.
 author: "ADRs4AI (engine: Covenant 5, 2026-08-26; productionized 2026-10-13 at the rights-holder's word)"
 
 # Ratified by the rights-holder 2026-10-18 (ADR-0003 QST-BRANDING; Pharos coin,
