@@ -676,9 +676,30 @@ def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", for
     visibility law). Phase-B (append) pushes will drop `force`; today's
     callers are phase-A epochs."""
     url = f"https://github.com/{mirror_slug}.git"
+    # Rename-redirect guard (Parallax wake, 2026-10-20): a renamed-away repo
+    # leaves a redirect, so a probe "finds" the old repo and a push lands on
+    # ITS object store — old under-stripped objects stay addressable. The
+    # probe therefore verifies the RESOLVED name; a mismatch means the named
+    # repo does not really exist (create takes the name and breaks the
+    # redirect) — and without create authority it is a hard, teaching stop.
+    probe = subprocess.run(
+        ["gh", "repo", "view", mirror_slug, "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+        capture_output=True, text=True,
+    )
+    resolved = probe.stdout.strip()
+    redirected = probe.returncode == 0 and resolved.lower() != mirror_slug.lower()
+    if redirected and not create:
+        raise RuntimeError(
+            f"push target {mirror_slug} resolves to {resolved} via a rename redirect — "
+            "pushing would land on the OLD repository and its object store. Name the "
+            "real repo, or enable create_if_missing so the named repo is created fresh."
+        )
     if create:
-        probe = subprocess.run(["gh", "repo", "view", mirror_slug], capture_output=True, text=True)
-        if probe.returncode != 0:
+        if redirected:
+            log.warning("probe for %s resolved to %s via a rename redirect — creating the "
+                        "named repo fresh so the push never lands on the old object store",
+                        mirror_slug, resolved)
+        if probe.returncode != 0 or redirected:
             # THE LAW (rights-holder, 2026-10-11): making a mirror PUBLIC is a
             # visibility act — the owner's explicit, per-repo word, every time.
             # This tool therefore creates PRIVATE only and offers no flag to do
