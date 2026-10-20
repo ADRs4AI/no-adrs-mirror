@@ -220,6 +220,12 @@ runs:
         while IFS= read -r p; do [ -n "$p" ] && args+=(--additional-strip "$p"); done <<< "$ADDITIONAL_STRIP_PATHS"
         while IFS= read -r p; do [ -n "$p" ] && args+=(--approved-root "$p"); done <<< "$APPROVED_PATHS"
         while IFS= read -r w; do [ -n "$w" ] && args+=(--disable-workflow "$w"); done <<< "$DISABLE_WORKFLOWS"
+        # Safe by construction (Parallax second look, rail 3): the CALLING
+        # workflow file is always disabled in the mirror — a copied mirror
+        # workflow running inside a mirror would mirror the mirror. No
+        # adopter memory test required; explicit lists still add to this.
+        self_wf="${GITHUB_WORKFLOW_REF%%@*}"; self_wf="$(basename "$self_wf")"
+        [ -n "$self_wf" ] && args+=(--disable-workflow "$self_wf")
         if [ -n "$DIGEST_PROMPT" ]; then args+=(--digest-prompt "$GITHUB_WORKSPACE/$DIGEST_PROMPT"); fi
         if [ -n "$MESSAGE_MAP" ]; then args+=(--message-map "$GITHUB_WORKSPACE/$MESSAGE_MAP"); fi
         if [ -n "$REDACT_DICT" ]; then args+=(--redact-dict "$GITHUB_WORKSPACE/$REDACT_DICT"); fi
@@ -233,7 +239,12 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: no-adrs-mirror
-        path: ${{ runner.temp }}/mirror
+        # Both the built tree AND the staged digest prompts (written beside
+        # it) — without the second path, "read what would be sent" was false
+        # for the downloadable artifact (Parallax second look, digest §).
+        path: |
+          ${{ runner.temp }}/mirror
+          ${{ runner.temp }}/mirror.prompts
         # Without this the artifact silently omits dotfiles AND the rewritten
         # .git history — the exact things a preview exists to let you inspect
         # (Sounder 6's artifact finding, 2026-10-19; upstream default is false).
@@ -253,7 +264,19 @@ runs:
         # declared approved_paths never receives a push — the step fails and
         # prints exactly the roots a deliberate approval would need. Private
         # mirrors stay ungated (staging freedom; publication is the boundary).
-        priv="$(gh api "repos/$MIRROR_REPO" --jq .private 2>/dev/null || echo true)"
+        # Unknown visibility must STOP, never mean "private" (Parallax second
+        # look, gap 2.1: a failed lookup followed by a successful push would
+        # bypass the public-target bootstrap). The one safe unknown: target
+        # absent AND create_if_missing=true — creation is private by
+        # construction; any other lookup failure halts here.
+        if priv="$(gh api "repos/$MIRROR_REPO" --jq .private 2>/dev/null)"; then :
+        elif [ "$CREATE_IF_MISSING" = "true" ]; then
+          priv="true"   # absent-or-unreadable + create path -> born private
+        else
+          echo "::error::cannot determine the mirror's visibility and create_if_missing is not true — stopping (unknown must stop, not mean private)"
+          echo "**Push stopped**: the visibility of \`$MIRROR_REPO\` could not be determined and \`create_if_missing\` is not enabled — fail-closed." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+        fi
         if [ "$priv" = "false" ] && [ -z "$(printf '%s' "$APPROVED_PATHS" | tr -d '[:space:]')" ]; then
           tops="$(cd "$RUNNER_TEMP/mirror" && ls -A | grep -v '^\.git$' | sort | tr '\n' ' ')"
           {

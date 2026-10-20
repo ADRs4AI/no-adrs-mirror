@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # Operator-facing narration goes through `log` (stderr; stdout stays the
 # machine interface — the JSON result). On a GitHub runner, anything worth a
@@ -234,7 +234,15 @@ def check_approved(cfg: BuildConfig) -> None:
     declaring them is mandatory, e.g. for a public mirror)."""
     if not cfg.approved_roots:
         return
-    kept, _ = partition(tracked_files(cfg.source), cfg.strip)
+    paths = tracked_files(cfg.source)
+    if cfg.history == "filter":
+        # Filter mode publishes HISTORY: a never-approved path added and
+        # deleted before HEAD would be invisible to a HEAD-only check yet
+        # still ride the public history (Parallax's second look, gap 2.2).
+        # Classify the union of every path that ever existed in the source.
+        hist = git(["log", "--format=", "--name-only", "--no-renames"], cfg.source)
+        paths = sorted({l.strip() for l in hist.splitlines() if l.strip()} | set(paths))
+    kept, _ = partition(paths, cfg.strip)
     roots = [r.strip().strip("/") for r in cfg.approved_roots if r.strip()]
 
     def _ok(p: str) -> bool:
@@ -250,26 +258,47 @@ def check_approved(cfg: BuildConfig) -> None:
             + ". Review them, then extend `approved_paths` (or strip them). "
             "Nothing was built or pushed."
         )
+        hist_note = (" — history mode `filter` checks every path that EVER existed, "
+                     "not only the current tree" if cfg.history == "filter" else "")
         raise RuntimeError(
             f"approved-paths gate: {len(new)} kept path(s) outside the approved "
             f"roots (new top-level entries: {', '.join(tops)}); "
-            f"first: {', '.join(new[:5])}"
+            f"first: {', '.join(new[:5])}{hist_note}"
         )
 
 
 def build_snapshot(cfg: BuildConfig) -> dict:
     """One-commit mirror: the kept tree at source HEAD, zero history, zero
-    message leakage. The quick-poise mode; filter mode is the linkable one."""
+    message leakage. The quick-poise mode; filter mode is the linkable one.
+
+    Built from `git archive HEAD` — the COMMITTED tree, never the worktree:
+    a worktree copy follows symlinks (a tracked, kept symlink into stripped
+    record content would materialize that content as a public regular file)
+    and can carry uncommitted bytes while the notice stamps the HEAD sha.
+    Both escapes closed per Parallax's second look (2026-10-20); the design
+    was already accepted in ADR-0002."""
     log.info("snapshot build: %s -> %s", cfg.source, cfg.out)
     kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
     cfg.out.mkdir(parents=True)
-    for rel in kept:
-        src = cfg.source / rel
-        dst = cfg.out / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+    archive = subprocess.run(
+        ["git", "-C", str(cfg.source), "archive", "HEAD"],
+        capture_output=True, check=True,
+    )
+    subprocess.run(["tar", "-x", "-C", str(cfg.out)], input=archive.stdout, check=True)
+    for rel in stripped:
+        p = cfg.out / rel
+        if p.is_symlink() or p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            shutil.rmtree(p)
+    # prune directories emptied by the strip (deepest first)
+    for d in sorted((p for p in cfg.out.rglob("*") if p.is_dir()), reverse=True):
+        try:
+            d.rmdir()
+        except OSError:
+            pass
     sha = head_sha(cfg.source)
     git(["init", "-q", "-b", "main"], cfg.out)
     _set_mirror_identity(cfg.out)

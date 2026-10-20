@@ -82,6 +82,7 @@ OK, approving the updated recommendation. In practice, I expect open source / cl
 
 ## Action Items
 
+- [x] **Build from the committed tree** (the archive half of Shipwright's build-from-archive hand): `build_snapshot` now extracts `git archive HEAD` instead of copying worktree bytes — closes the symlink-materialization and dirty-worktree escapes Parallax's second look (2026-10-20) proved against `shutil.copy2`; kill tests pinned (`tests/test_mirror.py`: symlink + dirty-worktree). The two-way tree/OID identity CHECK remains with the tree-identity item below — DONE 2026-10-20, Covenant 5 (v0.3.0)
 - [ ] **Two-phase history engine** (the rights-holder's 10-18 design): phase A (no target / catastrophic parameter change) = full filter rewrite, force-push, **declared epoch** stamped in the notice ("history epoch N, rebuilt YYYY-MM-DD" — the honest-notice pattern applied to history itself); phase B (target exists) = incremental filter via `--state-branch` (map in the private source), **plain fast-forward push, never --force**; a non-FF in phase B fails closed with a teaching message and awaits the human word for a new epoch — Owner: Covenant 5, composing with Shipwright's build-from-archive hand
 - [ ] Tree-identity CI check in the Action (with a teaching failure message) — Owner: Covenant 5
 - [ ] Notice sentence (the port promise) added to the template on QST-ROUNDTRIP-V2's answer — Owner: Covenant 5

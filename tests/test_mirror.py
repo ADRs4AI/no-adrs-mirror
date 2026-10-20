@@ -303,6 +303,48 @@ def test_approved_roots_gate_passes_when_covered(source: Path, tmp_path: Path):
     mirror.check_approved(cfg)  # must not raise
 
 
+def test_snapshot_builds_from_committed_tree_not_worktree(source: Path, tmp_path: Path):
+    # Parallax second look (2026-10-20): a worktree copy can publish
+    # UNCOMMITTED bytes while the notice stamps the HEAD sha. The archive
+    # build must carry committed content only.
+    (source / "src" / "app.py").write_text("DIRTY = 'uncommitted'\n")
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app")
+    mirror.build_snapshot(cfg)
+    assert "DIRTY" not in (tmp_path / "out" / "src" / "app.py").read_text()
+
+
+def test_snapshot_symlink_cannot_materialize_stripped_content(source: Path, tmp_path: Path):
+    # Parallax second look: shutil.copy2 followed symlinks, so a tracked,
+    # KEPT symlink pointing into stripped record content became a public
+    # regular file holding that content. The archive build preserves the
+    # symlink as a symlink (a path string, dangling after the strip).
+    (source / "src" / "leak.md").symlink_to("../docs/adr/seed-2026-01-01-thoughts.md")
+    _git(["add", "src/leak.md"], source)
+    _git(["commit", "-q", "-m", "feat: add handy link"], source)
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app")
+    mirror.build_snapshot(cfg)
+    out_link = tmp_path / "out" / "src" / "leak.md"
+    assert not out_link.is_file()  # is_file() follows symlinks: a regular file
+    #                                with record bytes would be the escape
+
+
+def test_filter_mode_approval_sees_historical_paths(source: Path, tmp_path: Path):
+    # Parallax second look, gap 2.2: a never-approved path added and deleted
+    # BEFORE HEAD is invisible to a HEAD-only check yet rides the published
+    # history. Filter mode must classify the union of every path that ever
+    # existed.
+    _commit(source, {"secrets-dump/creds.txt": "x\n"}, "chore: add dump")
+    _git(["rm", "-q", "secrets-dump/creds.txt"], source)
+    _git(["commit", "-q", "-m", "chore: remove dump"], source)
+    kept, _ = mirror.partition(mirror.tracked_files(source), mirror.DEFAULT_STRIP)
+    tops = sorted({p.split("/")[0] for p in kept})
+    assert "secrets-dump" not in tops  # gone from HEAD — the trap is set
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app",
+                             history="filter", approved_roots=tops)
+    with pytest.raises(RuntimeError, match="EVER existed"):
+        mirror.check_approved(cfg)
+
+
 def test_additional_strip_is_additive(source: Path, tmp_path: Path, capsys):
     # Parallax P0.1: --additional-strip appends to the defaults instead of
     # replacing them — docs/adr (a default) AND src/queue.py (the addition)
