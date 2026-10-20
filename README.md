@@ -109,7 +109,10 @@ jobs:
    `.github/workflows/no-adrs-mirror.yml`.
 2. Add the `MIRROR_TOKEN` secret: a PAT or GitHub App token able to push to —
    and create — the mirror (the default `GITHUB_TOKEN` cannot push
-   cross-repo). `ANTHROPIC_API_KEY` only for digests.
+   cross-repo). **It needs workflow authority too** (fine-grained: Contents
+   *and* Workflows, Read and write; classic: `repo` + `workflow`): mirrors
+   deliberately carry your live CI workflows, and GitHub refuses to push
+   `.github/workflows/` without it. `ANTHROPIC_API_KEY` only for digests.
 3. Push to `main`. The first run uploads a **preview artifact** — read it,
    then remove the `dry_run` line (or set it `"false"`): the mirror appears —
    private — at `<your-repo>-no-adrs`.
@@ -208,7 +211,7 @@ Adopting this on an existing public repo doesn't cost its standing:
 
 | Input | Default | Notes |
 |---|---|---|
-| `token` | — **(required)** | PAT/App token able to push to and create the mirror; `GITHUB_TOKEN` cannot push cross-repo |
+| `token` | — **(required)** | PAT/App token able to push to and create the mirror, **with workflow authority** (mirrors carry live CI); `GITHUB_TOKEN` cannot push cross-repo |
 | `mirror_repo` | `<owner>/<repo>-no-adrs` | Target repository |
 | `strip_paths` | the 12 defaults above | Newline-separated paths/globs to withhold (setting this replaces the whole list) |
 | `additional_strip_paths` | — | Newline-separated paths/globs **added** to the list — withhold more without re-declaring the defaults |
