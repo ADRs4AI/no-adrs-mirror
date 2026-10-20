@@ -240,7 +240,8 @@ def check_approved(cfg: BuildConfig) -> None:
         # deleted before HEAD would be invisible to a HEAD-only check yet
         # still ride the public history (Parallax's second look, gap 2.2).
         # Classify the union of every path that ever existed in the source.
-        hist = git(["log", "--format=", "--name-only", "--no-renames"], cfg.source)
+        hist = git(["-c", "core.quotePath=false", "log", "--format=", "--name-only",
+                    "--no-renames"], cfg.source)
         paths = sorted({l.strip() for l in hist.splitlines() if l.strip()} | set(paths))
     kept, _ = partition(paths, cfg.strip)
     roots = [r.strip().strip("/") for r in cfg.approved_roots if r.strip()]
