@@ -120,6 +120,8 @@ Yes, Option B. But let's go with Apache 2.0 instead, for patent and trademark re
 **ANS:** (by Jérémie Lumbroso)
 Yes. This is an important component: It's intimidating to commit your thinking, the good, the bad, the vulnerable — the parts that reveal more about what you think than code would. The most important scaffold to helping people get there is the ability to easily pull a screen of privacy, one that is robust, reliable, easy to access. Publication of `no-adrs-mirror` to the Marketplace is essential from Day 1.
 
+*Executed (Covenant 5 / Claude Fable 5 driving the founder's own browser at his word, 2026-10-20 ~02:0x UTC)*: **the listing is LIVE** — https://github.com/marketplace/actions/no-adrs-mirror, v1 Latest, by ADRs4AI, categories Utilities + Publishing. The two human-only acts stayed his: the org's Marketplace Developer Agreement acceptance (v2.4, text banked in HQ `docs/reference/`, analysis queued at his ask) and the sudo-mode passkey. Two live findings for the next Action's benefit: (1) **the Marketplace caps `description:` at 125 characters** — the validator rejected the long dress; the field was shortened (depth lives in the README, per Mint's dress-register mechanics); (2) **the sudo re-auth interstitial drops the pending form POST** — the publish checkbox and categories silently reset after authentication; the fix is simply to redo the form inside the fresh sudo window. **QST-BRANDING's engraved tripwire was performed at the gate**: the listing icon's pixels verified a CLOSED book (zoomed capture) — the Feather/📘 convergence held; the Octicons same-name trap did not fire.
+
 ---
 
 ## Action Items
