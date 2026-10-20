@@ -82,6 +82,8 @@ digests: 45 staged (dry run — prompts recorded, no API call)
 
 ## Quick start
 
+> **Wiring this with a model?** Have it load [`.claude/skills/no-adrs-mirror/SKILL.md`](.claude/skills/no-adrs-mirror/SKILL.md) — the wiring walkthrough: the dry-run-first ladder, the fail-closed gates, and the laws, kept true against `action.yml`.
+
 ```yaml
 # .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
 on:
