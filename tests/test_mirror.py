@@ -416,6 +416,78 @@ def test_filter_three_syncs_state_branch_never_rewritten(source: Path, tmp_path:
     assert len(new) >= 5  # chain + syncs all present
 
 
+def test_filter_docs_only_delta_declares_current(source: Path, tmp_path: Path):
+    # The crew's first real push (a docs-only seed) crashed filter-repo: an
+    # all-pruned delta maps the tip to a mark no commit materializes. The
+    # common case now short-circuits: phase "current", nothing built beyond
+    # the marker, push is a no-op, the mirror is untouched.
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _sync(source, tmp_path / "m1", bare, "filter")
+    tip = subprocess.run(["git", "-C", str(bare), "rev-parse", "main"],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    _commit(source, {"docs/adr/0002-new-thought.md": "# ADR-0002\nsecret\n"},
+            "docs: a record-only push")
+    out2 = tmp_path / "m2"
+    cfg2 = mirror.BuildConfig(source=source, out=out2, repo_slug="acme/app",
+                              history="filter", state_objects=str(bare))
+    s2 = mirror.build_filtered(cfg2)
+    assert s2["phase"] == "current"
+    mirror.push(out2, "acme/app-no-adrs", create=False, url_override=str(bare))  # no-op
+    tip2 = subprocess.run(["git", "-C", str(bare), "rev-parse", "main"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+    assert tip2 == tip  # untouched
+
+
+def test_filter_mixed_delta_record_only_tip_syncs_and_state_survives(source: Path, tmp_path: Path):
+    # It-9 shape (b): rapid pushes coalesce (cancel-in-progress keeps the
+    # newest run) into a delta of [code commit, record-only TIP]. The guard
+    # sees kept content and proceeds — upstream filter-repo 2.47.0 then dies
+    # writing metadata for the pruned tip (an unresolved int mark; reproduces
+    # on a toy repo with stock filter-repo). The shim resolves the mark via
+    # target-marks: the code commit must cross, prior SHAs must survive, and
+    # — three-deep — the state this run persists must feed the NEXT sync.
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _sync(source, tmp_path / "m1", bare, "filter")
+    old = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    _commit(source, {"src/new.py": "N = 1\n"}, "feat: add n")
+    _commit(source, {"docs/adr/0003-tip.md": "# ADR-0003\nsecret tip\n"},
+            "docs: record-only tip")
+    s2 = _sync(source, tmp_path / "m2", bare, "filter")
+    assert s2["phase"] == "incremental"
+    shown = subprocess.run(["git", "-C", str(bare), "show", "main:src/new.py"],
+                           capture_output=True, text=True, check=True).stdout
+    assert shown == "N = 1\n"  # the code commit crossed
+    new = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    assert old <= new, "a prior mirror SHA vanished — phase B must preserve every link"
+    _commit(source, {"src/n3.py": "C = 3\n"}, "feat: n3")
+    s3 = _sync(source, tmp_path / "m3", bare, "filter")
+    assert s3["phase"] == "incremental"  # shim-written state is consumable
+
+
+def test_filter_record_only_commit_mid_delta_syncs(source: Path, tmp_path: Path):
+    # It-9 shape (c): a record-only commit MID-delta with code at the tip —
+    # the everyday interleaving of a deliberating repo. Same upstream int-mark
+    # class (first-changed-commits writer); must sync clean through the shim.
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _sync(source, tmp_path / "m1", bare, "filter")
+    _commit(source, {"docs/adr/0004-mid.md": "# ADR-0004\nsecret mid\n"},
+            "docs: record-only mid-delta")
+    _commit(source, {"src/new2.py": "M = 2\n"}, "feat: add m")
+    s2 = _sync(source, tmp_path / "m2", bare, "filter")
+    assert s2["phase"] == "incremental"
+    shown = subprocess.run(["git", "-C", str(bare), "show", "main:src/new2.py"],
+                           capture_output=True, text=True, check=True).stdout
+    assert shown == "M = 2\n"
+    withheld = subprocess.run(["git", "-C", str(bare), "log", "--all", "--format=%s"],
+                              capture_output=True, text=True, check=True).stdout
+    assert "mid-delta" not in withheld  # the record-only commit never crossed
+
+
 def test_snapshot_incremental_appends_without_force(source: Path, tmp_path: Path):
     # Snapshot syncs after the first append one commit each (the ours-merge
     # fast-forward) instead of force-replacing a single-commit history.

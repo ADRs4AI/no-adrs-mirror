@@ -12,6 +12,10 @@ jobs:
     if: ${{ vars.INT_SRC_REPO != '' }}
     steps:
       - uses: actions/checkout@v7
+      # checkout plants a local extraheader with the workflow's OWN token;
+      # commands running in this directory would auth as the wrong identity
+      # and see the fixture repos as "not found" (cwd-dependent credentials).
+      - run: git config --local --unset-all http.https://github.com/.extraheader || true
       - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: python -m pip install --quiet git-filter-repo

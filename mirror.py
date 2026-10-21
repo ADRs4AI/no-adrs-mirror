@@ -38,6 +38,7 @@ import argparse
 import datetime as _dt
 import fnmatch
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -49,7 +50,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 # Operator-facing narration goes through `log` (stderr; stdout stays the
 # machine interface — the JSON result). On a GitHub runner, anything worth a
@@ -121,6 +122,26 @@ def git(args: list[str], cwd: Path, check: bool = True) -> str:
     if check and result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {cwd}:\n{result.stderr}")
     return result.stdout
+
+
+FILTER_REPO_SHIM = HERE / "filter_repo_shim.py"
+
+
+def _filter_repo(args: list[str], cwd: Path) -> None:
+    """Run git-filter-repo through the pinned shim (filter_repo_shim.py):
+    stock filter-repo plus one additive patch that keeps --state-branch
+    incremental metadata writable when the delta contains pruned
+    (record-only) commits — upstream dies on an unresolved int mark there
+    (ADR-0001 It-9; reproduces on a 4-commit toy repo with stock 2.47.0).
+    Loud on failure, like git()."""
+    result = subprocess.run(
+        [sys.executable, str(FILTER_REPO_SHIM), *args],
+        cwd=str(cwd), capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"git-filter-repo (via shim) failed in {cwd}:\n{result.stderr}"
+        )
 
 
 def tracked_files(source: Path) -> list[str]:
@@ -356,9 +377,11 @@ def build_filtered(cfg: BuildConfig) -> dict:
     messages rewritten per the tier ladder (map/redact/mechanical/scrub).
     Old mirror SHAs stay stable across incremental re-runs (phase B)."""
     log.info("filter build: %s -> %s (messages=%s)", cfg.source, cfg.out, cfg.messages)
-    if shutil.which("git-filter-repo") is None:
+    if (shutil.which("git-filter-repo") is None
+            and importlib.util.find_spec("git_filter_repo") is None):
         raise RuntimeError(
-            "history=filter needs git-filter-repo (pip install git-filter-repo)"
+            "history=filter needs git-filter-repo "
+            "(pip install git-filter-repo==2.47.0)"
         )
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
@@ -406,6 +429,36 @@ def build_filtered(cfg: BuildConfig) -> dict:
     # objects (first continuous on-push run, 2026-10-21).
     sync_branch = git(["symbolic-ref", "--short", "HEAD"], cfg.out).strip()
     if state_in_clone:
+        # Record-only delta → NOTHING to sync. Without this, an incremental
+        # run whose new commits are all pruned maps the branch tip to a mark
+        # no commit materializes, and filter-repo crashes internally on the
+        # unresolved int (the crew's first real push — a docs-only seed —
+        # found it). The most common push class in a deliberating repo gets
+        # the cheapest path: declare the mirror current and stop.
+        try:
+            # The marks file is not reliably ordered; the newest-processed
+            # commit is the one with the HIGHEST mark number (marks are
+            # assigned in processing order even when lines are not).
+            mark_lines = [l.split() for l in git(
+                ["show", f"refs/heads/{STATE_BRANCH}:source-marks"],
+                cfg.out).splitlines() if l.strip()]
+            last_synced = max(mark_lines, key=lambda f: int(f[0][1:]))[1]
+            delta_files = [l for l in git(
+                ["-c", "core.quotePath=false", "log", "--format=", "--name-only",
+                 "--no-renames", f"{last_synced}..HEAD"], cfg.out).splitlines() if l.strip()]
+            kept_delta, _ = partition(sorted(set(delta_files)), cfg.strip)
+            if not kept_delta:
+                n_commits = len(git(["rev-list", f"{last_synced}..HEAD"], cfg.out).split())
+                log.info("mirror already current: %d new commit(s), all record-only", n_commits)
+                step_summary(f"**Mirror already current** — {n_commits} new commit(s) since "
+                             "the last sync touch only withheld paths; nothing crossed, "
+                             "nothing pushed.")
+                (cfg.out.parent / (cfg.out.name + PHASE_SUFFIX)).write_text("current")
+                kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
+                return {"kept": len(kept), "stripped": len(stripped),
+                        "source_sha": head_sha(cfg.source), "phase": "current"}
+        except RuntimeError:
+            log.warning("delta probe failed (rewritten source?) — proceeding with a full pass")
         # The state maps source commits to REWRITTEN objects, which live only
         # in the mirror — a fresh clone must fetch them or fast-import dies
         # ("object not found"). Unreachable mirror + present state fails
@@ -423,7 +476,7 @@ def build_filtered(cfg: BuildConfig) -> dict:
                 "Fix the mirror URL/credentials — or DECLARE a rebuild with "
                 'history_epoch: "new". Never both silently.'
             )
-    args = ["filter-repo", "--force", "--invert-paths", "--prune-empty", "always",
+    args = ["--force", "--invert-paths", "--prune-empty", "always",
             "--state-branch", STATE_BRANCH,
             "--refs", f"refs/heads/{sync_branch}"]
     for pat in cfg.strip:
@@ -487,7 +540,7 @@ def build_filtered(cfg: BuildConfig) -> dict:
             "else:\n"
             "    commit.message = (line.rstrip() + '\\n').encode()"
         )]
-    git(args, cfg.out)
+    _filter_repo(args, cfg.out)
     # Persist the state back to the source so the NEXT run is phase B.
     # filter-repo deliberately removes the origin remote after rewriting;
     # re-point it at the source (local path, or the CI workspace — the action
@@ -810,6 +863,10 @@ def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main",
     if force is None:
         marker = out.parent / (out.name + PHASE_SUFFIX)
         phase = marker.read_text().strip() if marker.exists() else "epoch"
+        if phase == "current":
+            print("mirror already current — nothing pushed")
+            log.info("push skipped: mirror already current")
+            return
         force = phase == "epoch"
     url = url_override or f"https://github.com/{mirror_slug}.git"
     # Rename-redirect guard (Parallax wake, 2026-10-20): a renamed-away repo
@@ -1044,6 +1101,9 @@ def main(argv: list[str] | None = None) -> int:
         cfg.terms = ns.terms
     check_approved(cfg)  # fail-closed, before anything is written
     stats = build_filtered(cfg) if cfg.history == "filter" else build_snapshot(cfg)
+    if stats.get("phase") == "current":
+        print(json.dumps({"source": str(source), "current": True, **stats}, indent=2))
+        return 0
     step_summary(removal_summary(cfg))
     digest_stats = None
     if cfg.digest != "none":

@@ -192,7 +192,10 @@ runs:
         DIGEST: ${{ inputs.digest }}
       run: |
         python -m pip install --quiet --upgrade pip
-        if [ "$HISTORY_MODE" = "filter" ]; then python -m pip install --quiet git-filter-repo; fi
+        # Pinned: the engine's filter_repo_shim.py patches a 2.47.0 metadata
+        # crash (--state-branch + pruned record-only commits, ADR-0001 It-9);
+        # the pin keeps the shim and the upstream bytes reviewed together.
+        if [ "$HISTORY_MODE" = "filter" ]; then python -m pip install --quiet git-filter-repo==2.47.0; fi
         if [ "$DIGEST" != "none" ]; then python -m pip install --quiet anthropic; fi
 
     - name: Build the mirror tree
