@@ -260,24 +260,6 @@ runs:
         if [ "$DRY_RUN" = "true" ]; then args+=(--digest-dry-run); fi
         python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
 
-    - name: Persist the sync state (filter mode)
-      if: ${{ inputs.history_mode == 'filter' && inputs.dry_run != 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        # The engine pushed the state branch into the workspace clone; carry
-        # it on to the hosted source with the checkout's own credentials so
-        # the NEXT run is phase B. Forced on purpose: the state is machinery,
-        # fully re-derived by any epoch; the record never lives here.
-        if git -C "$GITHUB_WORKSPACE" rev-parse --verify -q "refs/heads/no-adrs-mirror/state" >/dev/null; then
-          if ! git -C "$GITHUB_WORKSPACE" push -q origin \
-            "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"; then
-            echo "**Sync state could not be persisted**: the workflow's \`GITHUB_TOKEN\` cannot write to this repository, so the NEXT run would silently fall back to a full rewrite. Add to the workflow: \`permissions: { contents: write }\` — filter mode persists its state branch (\`no-adrs-mirror/state\`) back to the source." >> "$GITHUB_STEP_SUMMARY"
-            echo "::error::state persist failed — grant 'permissions: contents: write' in the calling workflow (filter mode pushes its state branch to the source)"
-            exit 1
-          fi
-        fi
-
     - name: Upload (dry run)
       if: ${{ inputs.dry_run == 'true' }}
       uses: actions/upload-artifact@v7
@@ -337,3 +319,24 @@ runs:
         # Hygiene: never leave a token-bearing rewrite in the job's config
         # for later steps to inherit.
         git config --global --unset-all url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf || true
+
+    - name: Persist the sync state (filter mode)
+      if: ${{ inputs.history_mode == 'filter' && inputs.dry_run != 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        # ORDER IS LOAD-BEARING: persist runs AFTER the mirror push, so a
+        # cancelled run (rapid pushes + cancel-in-progress) can never leave
+        # state referencing objects the mirror never received. Worst case
+        # after any cancellation: the mirror is one sync ahead of state, and
+        # the next run re-derives the delta deterministically — self-healing.
+        # Forced on purpose: the state is machinery, fully re-derived by any
+        # epoch; the record never lives here.
+        if git -C "$GITHUB_WORKSPACE" rev-parse --verify -q "refs/heads/no-adrs-mirror/state" >/dev/null; then
+          if ! git -C "$GITHUB_WORKSPACE" push -q origin \
+            "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"; then
+            echo "**Sync state could not be persisted**: the workflow's \`GITHUB_TOKEN\` cannot write to this repository, so the NEXT run would silently fall back to a full rewrite. Add to the workflow: \`permissions: { contents: write }\` — filter mode persists its state branch (\`no-adrs-mirror/state\`) back to the source." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::state persist failed — grant 'permissions: contents: write' in the calling workflow (filter mode pushes its state branch to the source)"
+            exit 1
+          fi
+        fi
