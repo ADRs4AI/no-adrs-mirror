@@ -29,7 +29,12 @@ import mirror  # noqa: E402
 
 
 def sh(args, cwd=None, **kw):
-    return subprocess.run(args, cwd=cwd, check=True, capture_output=True, text=True, **kw)
+    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, **kw)
+    if r.returncode != 0:
+        # Surface stderr — a swallowed 128 cost a full diagnosis cycle.
+        print(f"FAILED ({r.returncode}): {' '.join(map(str, args))}\n{r.stderr}", file=sys.stderr)
+        raise subprocess.CalledProcessError(r.returncode, args, r.stdout, r.stderr)
+    return r
 
 
 def main() -> int:
