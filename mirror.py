@@ -363,6 +363,10 @@ def build_filtered(cfg: BuildConfig) -> dict:
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
     git(["clone", "-q", "--no-local", str(cfg.source), str(cfg.out)], cfg.source.parent)
+    # Identity FIRST: --state-branch makes filter-repo commit, and a bare CI
+    # runner has no git identity ("Author identity unknown" — caught by the
+    # public repo's own CI, not by a configured laptop).
+    _set_mirror_identity(cfg.out)
     # Phase selection: a state branch in the source (riding into this clone)
     # means incremental — only new commits are processed and prior rewritten
     # SHAs stay byte-stable. "history_epoch: new" deletes it deliberately.
