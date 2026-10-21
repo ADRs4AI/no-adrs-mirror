@@ -71,6 +71,27 @@ the mirror by hand, or an epoch happened elsewhere). Reconcile by hand, or
 declare a new epoch (`history_epoch: "new"` — full rebuild, force-push, said
 in the notice). Incremental syncs never force.
 
+## "TypeError: %b requires a bytes-like object … not 'int'" (inside git-filter-repo)
+
+Upstream git-filter-repo 2.47.0 crashes writing its run metadata on an
+incremental (`--state-branch`) sync whose delta contains **pruned
+commits** — for this Action, any record-only commit, the most common push
+in a deliberating repo. The engine ships a pinned shim
+(`filter_repo_shim.py`) that resolves the offending integer marks through
+filter-repo's own `target-marks` mapping, so a current version of the
+Action never shows this error. If you see it, you are running an engine
+older than v0.5.0 or invoking `git filter-repo` directly: update the
+Action (`@v1` floats), or run the shim in place of the bare tool.
+Full forensic: ADR-0001 Iterations 8–9.
+
+## "metadata references mark N but target-marks has no hash for it"
+
+The shim's own refusal: a rewritten object this run never materialized, and
+persisting state that references it would break the *next* sync. Declare a
+rebuild with `history_epoch: "new"` (full epoch, disclosed in the notice) and
+report the occurrence — this path is believed unreachable after the engine's
+record-only short-circuit, so a sighting is valuable data.
+
 ## Two runs racing
 
 The shipped snippets carry a `concurrency` block (newest run wins, older one
