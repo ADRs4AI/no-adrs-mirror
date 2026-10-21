@@ -378,6 +378,21 @@ def test_filter_incremental_shas_stable_and_fast_forward(source: Path, tmp_path:
     assert len(new) > len(old)
 
 
+def test_filter_incremental_survives_extra_source_branches(source: Path, tmp_path: Path):
+    # Third live attempt's gap: extra source branches minted state entries
+    # for objects that never reach the mirror; the next incremental run died
+    # fetching them. The rewrite is now single-branch — side branches must
+    # not poison phase B.
+    _git(["branch", "side-experiment"], source)
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    s1 = _sync(source, tmp_path / "m1", bare, "filter")
+    assert s1["phase"] == "epoch"
+    _commit(source, {"src/new.py": "N = 1\n"}, "feat: add n")
+    s2 = _sync(source, tmp_path / "m2", bare, "filter")
+    assert s2["phase"] == "incremental"
+
+
 def test_snapshot_incremental_appends_without_force(source: Path, tmp_path: Path):
     # Snapshot syncs after the first append one commit each (the ours-merge
     # fast-forward) instead of force-replacing a single-commit history.
