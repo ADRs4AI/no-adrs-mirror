@@ -43,6 +43,21 @@ The named mirror was renamed away; pushing through the redirect would land on
 the OLD repository and its object store. Name the real repo, or enable
 `create_if_missing` to create the named repo fresh (which breaks the redirect).
 
+## "incremental state is present but the mirror's objects are unreachable"
+
+Phase B continues the previous rewrite, whose objects live in the mirror —
+the build must be able to *read* the mirror. Usually the token can't see it:
+fix credentials/URL, or **declare** a rebuild with `history_epoch: "new"`.
+The engine never silently rebuilds: that would break every link without a
+declared epoch.
+
+## "phase B push was not a fast-forward"
+
+The mirror's history diverged from what this sync extends (someone pushed to
+the mirror by hand, or an epoch happened elsewhere). Reconcile by hand, or
+declare a new epoch (`history_epoch: "new"` — full rebuild, force-push, said
+in the notice). Incremental syncs never force.
+
 ## Two runs racing
 
 The shipped snippets carry a `concurrency` block (newest run wins, older one

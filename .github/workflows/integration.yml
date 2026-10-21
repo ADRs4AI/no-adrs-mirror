@@ -1,0 +1,22 @@
+# Live two-phase integration test against the dedicated fixture repos.
+# Needs: secret INTEGRATION_TOKEN + variables INT_SRC_REPO, INT_MIRROR_REPO
+# (Settings → Secrets and variables → Actions). Dispatch-only, on purpose:
+# it force-resets both fixture repos.
+name: integration
+on:
+  workflow_dispatch:
+concurrency: { group: integration, cancel-in-progress: false }
+jobs:
+  two-phase:
+    runs-on: ubuntu-latest
+    if: ${{ vars.INT_SRC_REPO != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.12" }
+      - run: python -m pip install --quiet git-filter-repo
+      - env:
+          INTEGRATION_TOKEN: ${{ secrets.INTEGRATION_TOKEN }}
+          INT_SRC_REPO: ${{ vars.INT_SRC_REPO }}
+          INT_MIRROR_REPO: ${{ vars.INT_MIRROR_REPO }}
+        run: python tests/integration/run.py

@@ -345,6 +345,54 @@ def test_filter_mode_approval_sees_historical_paths(source: Path, tmp_path: Path
         mirror.check_approved(cfg)
 
 
+def _sync(source: Path, out: Path, bare: Path, history: str) -> dict:
+    """One full engine cycle into a local bare 'origin' (the offline sandbox:
+    no gh, no network — url_override)."""
+    cfg = mirror.BuildConfig(source=source, out=out, repo_slug="acme/app", history=history,
+                             state_objects=str(bare))
+    build = mirror.build_filtered if history == "filter" else mirror.build_snapshot
+    stats = build(cfg)
+    mirror.write_notice(cfg, stats, None, now="2026-10-21T00:00:00Z")
+    mirror.commit_all(cfg, stats)
+    mirror.push(out, "acme/app-no-adrs", create=False, url_override=str(bare))
+    return stats
+
+
+def test_filter_incremental_shas_stable_and_fast_forward(source: Path, tmp_path: Path):
+    # The two-phase law (ADR-0002), engine form: sync 1 is an epoch; sync 2 —
+    # with the state branch persisted into the source — is INCREMENTAL: every
+    # SHA from sync 1 must survive into sync 2's history, and the push runs
+    # WITHOUT force (a non-FF would raise).
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    s1 = _sync(source, tmp_path / "m1", bare, "filter")
+    assert s1["phase"] == "epoch"
+    old = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    _commit(source, {"src/new.py": "N = 1\n"}, "feat: add n")
+    s2 = _sync(source, tmp_path / "m2", bare, "filter")
+    assert s2["phase"] == "incremental"
+    new = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    assert old <= new, "a prior mirror SHA vanished — phase B must preserve every link"
+    assert len(new) > len(old)
+
+
+def test_snapshot_incremental_appends_without_force(source: Path, tmp_path: Path):
+    # Snapshot syncs after the first append one commit each (the ours-merge
+    # fast-forward) instead of force-replacing a single-commit history.
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _sync(source, tmp_path / "m1", bare, "snapshot")
+    old = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    _commit(source, {"src/new.py": "N = 2\n"}, "feat: more")
+    _sync(source, tmp_path / "m2", bare, "snapshot")
+    new = set(subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                             capture_output=True, text=True, check=True).stdout.split())
+    assert old <= new and len(new) > len(old)
+
+
 def test_removal_summary_names_each_rule(source: Path, tmp_path: Path):
     # The founder's ask (2026-10-21): the step summary teaches WHAT each rule
     # removed — including rules that removed nothing (legible absence).

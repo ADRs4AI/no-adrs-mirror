@@ -65,6 +65,15 @@ inputs:
     description: "snapshot (one commit, no history — no message leaks) | filter (git filter-repo: code history kept, record-only commits pruned WITH their messages; mixed commits survive)"
     required: false
     default: "snapshot"
+  history_epoch:
+    description: >-
+      auto (default) | new. Filter mode is INCREMENTAL by default: a state
+      branch (no-adrs-mirror/state, kept in the private source) lets each sync
+      process only new commits — prior mirror SHAs stay stable and pushes are
+      plain fast-forwards. "new" DECLARES a full rebuild: rewrite, force-push,
+      said in the notice. A deliberate human act, never automatic.
+    required: false
+    default: "auto"
   message_mode:
     description: >-
       filter mode only: map (model-written one-liners from message_map, mechanical
@@ -153,7 +162,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: ${{ inputs.python_version }}
 
@@ -190,8 +199,11 @@ runs:
       shell: bash
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        GH_TOKEN: ${{ inputs.token }}
+        MIRROR_REPO: ${{ inputs.mirror_repo }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         HISTORY_MODE: ${{ inputs.history_mode }}
+        HISTORY_EPOCH: ${{ inputs.history_epoch }}
         MESSAGE_MODE: ${{ inputs.message_mode }}
         DRY_RUN: ${{ inputs.dry_run }}
         MESSAGE_MAP: ${{ inputs.message_map }}
@@ -210,8 +222,19 @@ runs:
         TERMS: ${{ inputs.terms }}
       run: |
         set -euo pipefail
+        # Incremental state: actions/checkout fetches only the triggering ref,
+        # so pull the state branch (if the source has one) before building.
+        git -C "$GITHUB_WORKSPACE" fetch -q origin \
+          "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state" 2>/dev/null || true
+        # Phase B needs the mirror's objects (the state maps to them); give
+        # git credentials for that read the same way the push step does.
+        if [ -n "$GH_TOKEN" ]; then
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+        fi
         args=(build --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/mirror" \
-              --history "$HISTORY_MODE" --messages "$MESSAGE_MODE" \
+              --history "$HISTORY_MODE" --history-epoch "$HISTORY_EPOCH" \
+              --state-objects "https://github.com/$MIRROR_REPO.git" \
+              --messages "$MESSAGE_MODE" \
               --digest "$DIGEST" --digest-model "$DIGEST_MODEL" \
               --digest-effort "$DIGEST_EFFORT" --digest-glob "$DIGEST_GLOB" \
               --digest-style "$DIGEST_STYLE" --digest-prompt-text "$DIGEST_PROMPT_TEXT" \
@@ -234,9 +257,23 @@ runs:
         if [ "$DRY_RUN" = "true" ]; then args+=(--digest-dry-run); fi
         python "${{ github.action_path }}/mirror.py" "${args[@]}" | tee "$RUNNER_TEMP/mirror-report.json"
 
+    - name: Persist the sync state (filter mode)
+      if: ${{ inputs.history_mode == 'filter' && inputs.dry_run != 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        # The engine pushed the state branch into the workspace clone; carry
+        # it on to the hosted source with the checkout's own credentials so
+        # the NEXT run is phase B. Forced on purpose: the state is machinery,
+        # fully re-derived by any epoch; the record never lives here.
+        if git -C "$GITHUB_WORKSPACE" rev-parse --verify -q "refs/heads/no-adrs-mirror/state" >/dev/null; then
+          git -C "$GITHUB_WORKSPACE" push -q origin \
+            "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"
+        fi
+
     - name: Upload (dry run)
       if: ${{ inputs.dry_run == 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: no-adrs-mirror
         # Both the built tree AND the staged digest prompts (written beside

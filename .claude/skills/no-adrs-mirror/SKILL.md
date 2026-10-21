@@ -29,7 +29,7 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0        # filter mode needs history; harmless for snapshot
       - uses: ADRs4AI/no-adrs-mirror@v1
@@ -44,7 +44,7 @@ jobs:
 ## The decisions, grouped (defaults are the honest ones)
 
 - **What is withheld**: `strip_paths` defaults to the record plus the tooling's working exhaust (`docs/adr`, `docs/inbox`, `docs/vignettes`, `docs/handoffs`, `docs/continuity`, `docs/HANDOFF-*.md`, `CLAUDE.md`, `AGENTS.md`, `.claude`, `.pneumatic`, `.working`, `.mcp.json`). To withhold more, use `additional_strip_paths` — additive, so the defaults never need re-declaring.
-- **History**: `history_mode: snapshot` (default — one commit, no history, no message leaks) or `filter` (code history kept, record-only commits pruned with their messages). Filter mode brings `message_mode`, default `scrub` — measured on this house's own repos, even code-only commit *subjects* carry deliberation. The degrade law: a commit the map doesn't cover degrades DOWN in warmth (to mechanical), never to its original text; a missing companion file fails the build.
+- **History**: `history_mode: snapshot` (default — one commit per sync, no source history, no message leaks) or `filter` (code history kept, record-only commits pruned with their messages). **Both are incremental**: syncs fast-forward and prior mirror SHAs stay stable (filter keeps a `no-adrs-mirror/state` branch in the private source); only a DECLARED `history_epoch: "new"` rewrites and force-pushes. Filter mode brings `message_mode`, default `scrub` — measured on this house's own repos, even code-only commit *subjects* carry deliberation. The degrade law: a commit the map doesn't cover degrades DOWN in warmth (to mechanical), never to its original text; a missing companion file fails the build.
 - **Digests** (`digest: index | per-adr`): model-written summaries of the withheld record, into the mirror. Needs `anthropic_api_key` as a secret. In dry runs, prompts are staged beside the artifact instead of sent — read them before going live.
 - **Workflows**: the calling workflow is auto-disabled in the mirror (a mirror must not mirror the mirror); list publish/release workflows that need absent secrets in `disable_workflows`. Test and lint workflows should stay live — green checks on public code are part of the trust story.
 - **The notice's terms line**: `terms` — one sentence on how the record can be requested. The default says maintainers decide; say something truer if something truer exists.

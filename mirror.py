@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 # Operator-facing narration goes through `log` (stderr; stdout stays the
 # machine interface — the JSON result). On a GitHub runner, anything worth a
@@ -98,6 +98,12 @@ DEFAULT_DIGEST_MODEL = "claude-sonnet-5"
 DEFAULT_DIGEST_EFFORT = "medium"
 DIGEST_DIR = "docs/deliberations-digest"
 NOTICE_FILE = "DELIBERATIONS-NOTICE.md"
+# Two-phase history (the rights-holder's law, ADR-0002): the state branch —
+# persisted in the PRIVATE source repo — lets git-filter-repo process only the
+# commits since the last sync, so prior mirror SHAs stay stable and pushes are
+# plain fast-forwards. Its absence (or a declared new epoch) is phase A.
+STATE_BRANCH = "no-adrs-mirror/state"
+PHASE_SUFFIX = ".phase"  # sibling marker next to the built tree: epoch | incremental
 INDEX_FILE = "DELIBERATIONS-DIGEST.md"
 HERE = Path(__file__).resolve().parent
 DEFAULT_PROMPT_PATH = HERE / "prompts" / "adr-digest.md"
@@ -215,6 +221,8 @@ class BuildConfig:
     digest_prompt_text: str = ""  # inline prompt; wins over digest_prompt when set
     digest_style: str = "full"  # full | brief (one-sentence bullets — the ADR index summary)
     digest_dry_run: bool = False
+    history_epoch: str = "auto"  # auto | new — "new" DECLARES a full rebuild (phase A)
+    state_objects: str = ""  # phase B: URL/path of the mirror, whose rewritten objects the state maps to
     approved_roots: list[str] = field(default_factory=list)  # fail-closed path consent
     notice: bool = True
     # "Governed by", never "available under": in closed mode the record is
@@ -334,7 +342,12 @@ def build_snapshot(cfg: BuildConfig) -> dict:
     sha = head_sha(cfg.source)
     git(["init", "-q", "-b", "main"], cfg.out)
     _set_mirror_identity(cfg.out)
-    return {"kept": len(kept), "stripped": len(stripped), "source_sha": sha}
+    # Snapshot needs no rewrite state: every sync after the first appends one
+    # commit via the push step's fast-forward merge (phase B by construction).
+    phase = "epoch" if cfg.history_epoch == "new" else "incremental"
+    (cfg.out.parent / (cfg.out.name + PHASE_SUFFIX)).write_text(phase)
+    return {"kept": len(kept), "stripped": len(stripped), "source_sha": sha,
+            "phase": phase}
 
 
 def build_filtered(cfg: BuildConfig) -> dict:
@@ -350,7 +363,50 @@ def build_filtered(cfg: BuildConfig) -> dict:
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
     git(["clone", "-q", "--no-local", str(cfg.source), str(cfg.out)], cfg.source.parent)
-    args = ["filter-repo", "--force", "--invert-paths", "--prune-empty", "always"]
+    # Phase selection: a state branch in the source (riding into this clone)
+    # means incremental — only new commits are processed and prior rewritten
+    # SHAs stay byte-stable. "history_epoch: new" deletes it deliberately.
+    # A clone keeps non-HEAD branches only as refs/remotes/origin/* — while
+    # filter-repo's own lookup suffix-matches them. Materialize the exact
+    # local ref first, then probe it FULLY QUALIFIED, so detection and
+    # filter-repo can never disagree about whether state exists.
+    subprocess.run(
+        ["git", "-C", str(cfg.out), "fetch", "-q", "origin",
+         f"+refs/heads/{STATE_BRANCH}:refs/heads/{STATE_BRANCH}"],
+        capture_output=True,
+    )
+    state_probe = subprocess.run(
+        ["git", "-C", str(cfg.out), "rev-parse", "--verify", "-q",
+         f"refs/heads/{STATE_BRANCH}"],
+        capture_output=True,
+    )
+    state_in_clone = state_probe.returncode == 0
+    if cfg.history_epoch == "new" and state_in_clone:
+        git(["branch", "-D", STATE_BRANCH], cfg.out)
+        state_in_clone = False
+    phase = "incremental" if state_in_clone else "epoch"
+    log.info("filter phase: %s (state branch %s)", phase,
+             "present" if state_in_clone else "absent")
+    if state_in_clone:
+        # The state maps source commits to REWRITTEN objects, which live only
+        # in the mirror — a fresh clone must fetch them or fast-import dies
+        # ("object not found"). Unreachable mirror + present state fails
+        # closed: silently rebuilding would break every link WITHOUT a
+        # declared epoch.
+        fetched = subprocess.run(
+            ["git", "-C", str(cfg.out), "fetch", "-q", cfg.state_objects or "/nonexistent",
+             "+refs/heads/*:refs/no-adrs-mirror/prior/*"],
+            capture_output=True, text=True,
+        ) if cfg.state_objects else None
+        if fetched is None or fetched.returncode != 0:
+            raise RuntimeError(
+                "incremental state is present but the mirror's objects are "
+                "unreachable (no --state-objects URL, or the fetch failed). "
+                "Fix the mirror URL/credentials — or DECLARE a rebuild with "
+                'history_epoch: "new". Never both silently.'
+            )
+    args = ["filter-repo", "--force", "--invert-paths", "--prune-empty", "always",
+            "--state-branch", STATE_BRANCH]
     for pat in cfg.strip:
         if any(ch in pat for ch in "*?["):
             args += ["--path-glob", pat]
@@ -413,9 +469,20 @@ def build_filtered(cfg: BuildConfig) -> dict:
             "    commit.message = (line.rstrip() + '\\n').encode()"
         )]
     git(args, cfg.out)
+    # Persist the state back to the source so the NEXT run is phase B.
+    # filter-repo deliberately removes the origin remote after rewriting;
+    # re-point it at the source (local path, or the CI workspace — the action
+    # then pushes it on to the hosted source with its own credentials).
+    subprocess.run(["git", "-C", str(cfg.out), "remote", "remove", "origin"],
+                   capture_output=True)
+    git(["remote", "add", "origin", str(cfg.source)], cfg.out)
+    git(["push", "-q", "origin", f"+refs/heads/{STATE_BRANCH}:refs/heads/{STATE_BRANCH}"],
+        cfg.out)
     kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
     _set_mirror_identity(cfg.out)
-    return {"kept": len(kept), "stripped": len(stripped), "source_sha": head_sha(cfg.source)}
+    (cfg.out.parent / (cfg.out.name + PHASE_SUFFIX)).write_text(phase)
+    return {"kept": len(kept), "stripped": len(stripped),
+            "source_sha": head_sha(cfg.source), "phase": phase}
 
 
 def _set_mirror_identity(repo: Path) -> None:
@@ -637,7 +704,12 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
             prov = f"; dictionary sha256 `{hashlib.sha256(cfg.redact_dict.read_bytes()).hexdigest()[:12]}`"
         msg_note = f" **Commit messages**: {tier}{prov}."
     lines += [
-        f"History mode: `{cfg.history}`."
+        f"History mode: `{cfg.history}`"
+        + (" (incremental — prior mirror commits remain reachable)"
+           if stats.get("phase") == "incremental"
+           else (" (epoch rebuild — history re-derived this sync)"
+                 if cfg.history == "filter" else ""))
+        + "."
         + msg_note
         + f" Generated {now} by "
         + f"[no-adrs-mirror](https://github.com/marketplace/actions/no-adrs-mirror) "
@@ -704,24 +776,39 @@ def commit_all(cfg: BuildConfig, stats: dict) -> str:
 # ------------------------------------------------------------------------ push
 
 
-def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", force: bool = True) -> None:
+def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main",
+         force: bool | None = None, url_override: str | None = None) -> None:
     """Push the built tree to the mirror repo. With `create`, a missing repo
     is created PRIVATE — always; there is no public flag in this tool (the
-    visibility law). Phase-B (append) pushes will drop `force`; today's
-    callers are phase-A epochs."""
-    url = f"https://github.com/{mirror_slug}.git"
+    visibility law).
+
+    Two-phase push (ADR-0002): the build leaves a sibling `.phase` marker.
+    Phase B (incremental) NEVER forces: if the target's tip is not already an
+    ancestor, it is woven in as the second parent of a `-s ours` merge, so the
+    push is a true fast-forward and every prior mirror SHA survives. Only a
+    declared epoch (phase A) force-pushes. `url_override` exists for the
+    offline test sandbox."""
+    if force is None:
+        marker = out.parent / (out.name + PHASE_SUFFIX)
+        phase = marker.read_text().strip() if marker.exists() else "epoch"
+        force = phase == "epoch"
+    url = url_override or f"https://github.com/{mirror_slug}.git"
     # Rename-redirect guard (Parallax wake, 2026-10-20): a renamed-away repo
     # leaves a redirect, so a probe "finds" the old repo and a push lands on
     # ITS object store — old under-stripped objects stay addressable. The
     # probe therefore verifies the RESOLVED name; a mismatch means the named
     # repo does not really exist (create takes the name and breaks the
     # redirect) — and without create authority it is a hard, teaching stop.
-    probe = subprocess.run(
-        ["gh", "repo", "view", mirror_slug, "--json", "nameWithOwner", "-q", ".nameWithOwner"],
-        capture_output=True, text=True,
-    )
-    resolved = probe.stdout.strip()
-    redirected = probe.returncode == 0 and resolved.lower() != mirror_slug.lower()
+    if url_override is None:
+        probe = subprocess.run(
+            ["gh", "repo", "view", mirror_slug, "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+            capture_output=True, text=True,
+        )
+        resolved = probe.stdout.strip()
+        redirected = probe.returncode == 0 and resolved.lower() != mirror_slug.lower()
+    else:
+        probe = None
+        resolved, redirected = mirror_slug, False
     if redirected and not create:
         raise RuntimeError(
             f"push target {mirror_slug} resolves to {resolved} via a rename redirect — "
@@ -733,7 +820,7 @@ def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", for
             log.warning("probe for %s resolved to %s via a rename redirect — creating the "
                         "named repo fresh so the push never lands on the old object store",
                         mirror_slug, resolved)
-        if probe.returncode != 0 or redirected:
+        if probe is None or probe.returncode != 0 or redirected:
             # THE LAW (rights-holder, 2026-10-11): making a mirror PUBLIC is a
             # visibility act — the owner's explicit, per-repo word, every time.
             # This tool therefore creates PRIVATE only and offers no flag to do
@@ -751,10 +838,34 @@ def push(out: Path, mirror_slug: str, *, create: bool, branch: str = "main", for
         git(["remote", "set-url", "mirror", url], out)
     else:
         git(["remote", "add", "mirror", url], out)
-    args = ["push", "mirror", f"HEAD:{branch}"]
     if force:
-        args.insert(1, "--force")
-    git(args, out)
+        git(["push", "--force", "mirror", f"HEAD:{branch}"], out)
+        return
+    # Phase B. If the target has history and its tip is not an ancestor of
+    # ours (it never is after a rewrite — the tip is the previous sync's bot
+    # commit), weave it in as the second parent of an `-s ours` merge: the
+    # tree stays exactly this build's, the push becomes a fast-forward, and
+    # every SHA anyone linked to remains reachable.
+    fetched = subprocess.run(["git", "-C", str(out), "fetch", "-q", "mirror", branch],
+                             capture_output=True, text=True)
+    if fetched.returncode == 0:
+        old_tip = git(["rev-parse", "FETCH_HEAD"], out).strip()
+        is_anc = subprocess.run(
+            ["git", "-C", str(out), "merge-base", "--is-ancestor", old_tip, "HEAD"]
+        ).returncode == 0
+        if not is_anc:
+            git(["merge", "-q", "-s", "ours", "--allow-unrelated-histories",
+                 "-m", "mirror: sync — previous tip preserved as a parent "
+                       "(fast-forward by construction)", "FETCH_HEAD"], out)
+    try:
+        git(["push", "mirror", f"HEAD:{branch}"], out)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "phase B push was not a fast-forward — the mirror's history has "
+            "diverged from what this sync extends. A new epoch is a deliberate "
+            'human act: set history_epoch: "new" (full rebuild, force-push, '
+            "declared in the notice) or reconcile the mirror by hand."
+        ) from e
 
 
 # ------------------------------------------------------------------------- CLI
@@ -774,6 +885,12 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     common(b)
     b.add_argument("--out", type=Path, required=True)
     b.add_argument("--history", choices=["snapshot", "filter"], default="snapshot")
+    b.add_argument("--state-objects", default="", dest="state_objects",
+                   help="phase B: URL/path of the mirror repo (its objects back the state map)")
+    b.add_argument("--history-epoch", choices=["auto", "new"], default="auto",
+                   dest="history_epoch",
+                   help='"new" DECLARES a full rebuild (phase A: rewrite + force-push); '
+                        "auto is incremental whenever state allows")
     b.add_argument("--messages", choices=["keep", "subject", "scrub", "map", "mechanical", "redact"],
                    default="subject")
     b.add_argument("--message-map", type=Path, default=None,
@@ -901,6 +1018,7 @@ def main(argv: list[str] | None = None) -> int:
         digest_effort=ns.digest_effort, digest_prompt=ns.digest_prompt,
         digest_prompt_text=ns.digest_prompt_text, digest_style=ns.digest_style,
         digest_dry_run=ns.digest_dry_run, notice=not ns.no_notice,
+        history_epoch=ns.history_epoch, state_objects=ns.state_objects,
         approved_roots=ns.approved_roots,
     )
     if ns.terms:
