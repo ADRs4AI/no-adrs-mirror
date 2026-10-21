@@ -226,14 +226,17 @@ runs:
         # so pull the state branch (if the source has one) before building.
         git -C "$GITHUB_WORKSPACE" fetch -q origin \
           "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state" 2>/dev/null || true
-        # Phase B needs the mirror's objects (the state maps to them); give
-        # git credentials for that read the same way the push step does.
+        # Phase B needs the mirror's objects (the state maps to them). The
+        # credential rides ONLY this one URL — a global insteadOf would route
+        # SOURCE access through the mirror-scoped token and 403 (first live
+        # phase-B attempt, 2026-10-21). Logs mask the secret.
+        STATE_URL="https://github.com/$MIRROR_REPO.git"
         if [ -n "$GH_TOKEN" ]; then
-          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          STATE_URL="https://x-access-token:${GH_TOKEN}@github.com/${MIRROR_REPO}.git"
         fi
         args=(build --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/mirror" \
               --history "$HISTORY_MODE" --history-epoch "$HISTORY_EPOCH" \
-              --state-objects "https://github.com/$MIRROR_REPO.git" \
+              --state-objects "$STATE_URL" \
               --messages "$MESSAGE_MODE" \
               --digest "$DIGEST" --digest-model "$DIGEST_MODEL" \
               --digest-effort "$DIGEST_EFFORT" --digest-glob "$DIGEST_GLOB" \
@@ -327,3 +330,6 @@ runs:
         git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
         create=""; [ "$CREATE_IF_MISSING" = "true" ] && create="--create"
         python "${{ github.action_path }}/mirror.py" push --out "$RUNNER_TEMP/mirror" --mirror "$MIRROR_REPO" $create
+        # Hygiene: never leave a token-bearing rewrite in the job's config
+        # for later steps to inherit.
+        git config --global --unset-all url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf || true
