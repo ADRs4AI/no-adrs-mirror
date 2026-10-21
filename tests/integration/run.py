@@ -87,7 +87,12 @@ def main() -> int:
         # --- phase A -------------------------------------------------------
         s1 = build_and_push("a")
         assert s1["phase"] == "epoch", s1
-        lsA = sh(["git", "ls-remote", f"https://github.com/{mir_slug}.git", "main"]).stdout.split()[0]
+        # cwd=work (not a git repo): the CI checkout's local config persists
+        # the workflow's own credentials, which out-rank the token's insteadOf
+        # rewrite for any git command run inside it — the private fixture then
+        # reads as "not found" (two red runs before this line moved).
+        lsA = sh(["git", "ls-remote", f"https://github.com/{mir_slug}.git", "main"],
+                 cwd=work).stdout.split()[0]
         print(f"phase A ok: epoch pushed, mirror tip {lsA[:12]}")
 
         # --- phase B -------------------------------------------------------
@@ -97,7 +102,8 @@ def main() -> int:
         sh(["git", "push", "-q", "origin", "main"], src)
         # fresh working clone, as a new CI run would see the world
         src2 = work / "src2"
-        sh(["git", "clone", "-q", f"https://github.com/{src_slug}.git", str(src2)])
+        sh(["git", "clone", "-q", f"https://github.com/{src_slug}.git", str(src2)],
+           cwd=work)
         sh(["git", "-C", str(src2), "fetch", "-q", "origin",
             "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"])
         out2 = work / "m-b"
@@ -111,7 +117,8 @@ def main() -> int:
         mirror.commit_all(cfg2, s2)
         mirror.push(out2, mir_slug, create=False)  # NO force: FF by construction
         probe = work / "probe"
-        sh(["git", "clone", "-q", f"https://github.com/{mir_slug}.git", str(probe)])
+        sh(["git", "clone", "-q", f"https://github.com/{mir_slug}.git", str(probe)],
+           cwd=work)
         reach = sh(["git", "-C", str(probe), "merge-base", "--is-ancestor", lsA, "HEAD"])
         print("phase B ok: incremental, fast-forward, phase-A tip still reachable")
         print("INTEGRATION: ALL GREEN")
