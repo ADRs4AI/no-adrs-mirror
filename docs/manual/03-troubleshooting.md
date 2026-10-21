@@ -43,6 +43,19 @@ The named mirror was renamed away; pushing through the redirect would land on
 the OLD repository and its object store. Name the real repo, or enable
 `create_if_missing` to create the named repo fresh (which breaks the redirect).
 
+## "state persist failed — grant 'permissions: contents: write'"
+
+Filter mode pushes its state branch (`no-adrs-mirror/state`) back to the
+source repo, and the workflow's default `GITHUB_TOKEN` is read-only. Add at
+the top level of the calling workflow:
+
+```yaml
+permissions:
+  contents: write
+```
+
+The run fails loudly instead of silently rebuilding next time.
+
 ## "incremental state is present but the mirror's objects are unreachable"
 
 Phase B continues the previous rewrite, whose objects live in the mirror —

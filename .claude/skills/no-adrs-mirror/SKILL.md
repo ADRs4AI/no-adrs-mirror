@@ -24,6 +24,7 @@ name: mirror
 on:
   push:
     branches: [main]
+permissions: { contents: write }   # filter mode persists state to this repo
 concurrency: { group: no-adrs-mirror, cancel-in-progress: true }
 jobs:
   mirror:

@@ -27,6 +27,9 @@ on:
         description: "Build only; upload the tree as an artifact instead of pushing"
         default: "false"
 
+permissions:
+  contents: write   # filter mode persists its state branch back to THIS repo
+
 concurrency:
   group: no-adrs-mirror
   cancel-in-progress: true

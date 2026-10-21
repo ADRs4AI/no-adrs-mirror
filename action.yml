@@ -270,8 +270,12 @@ runs:
         # the NEXT run is phase B. Forced on purpose: the state is machinery,
         # fully re-derived by any epoch; the record never lives here.
         if git -C "$GITHUB_WORKSPACE" rev-parse --verify -q "refs/heads/no-adrs-mirror/state" >/dev/null; then
-          git -C "$GITHUB_WORKSPACE" push -q origin \
-            "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"
+          if ! git -C "$GITHUB_WORKSPACE" push -q origin \
+            "+refs/heads/no-adrs-mirror/state:refs/heads/no-adrs-mirror/state"; then
+            echo "**Sync state could not be persisted**: the workflow's \`GITHUB_TOKEN\` cannot write to this repository, so the NEXT run would silently fall back to a full rewrite. Add to the workflow: \`permissions: { contents: write }\` — filter mode persists its state branch (\`no-adrs-mirror/state\`) back to the source." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::state persist failed — grant 'permissions: contents: write' in the calling workflow (filter mode pushes its state branch to the source)"
+            exit 1
+          fi
         fi
 
     - name: Upload (dry run)

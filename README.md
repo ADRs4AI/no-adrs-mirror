@@ -104,6 +104,8 @@ jobs:
           token: ${{ secrets.MIRROR_TOKEN }}
           create_if_missing: "true"  # creates PRIVATE, always
           dry_run: "true"            # first run: preview only — nothing pushes
+          # history_mode: filter requires, at the workflow top level:
+          #   permissions: { contents: write }   (state branch persists to THIS repo)
           # approved_paths: |        # required once the mirror is PUBLIC (fail-closed)
           #   src
           #   README.md
