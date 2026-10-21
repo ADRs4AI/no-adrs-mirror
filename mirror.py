@@ -399,6 +399,12 @@ def build_filtered(cfg: BuildConfig) -> dict:
     phase = "incremental" if state_in_clone else "epoch"
     log.info("filter phase: %s (state branch %s)", phase,
              "present" if state_in_clone else "absent")
+    # Restrict the rewrite to the ONE synced branch. Without --refs,
+    # filter-repo processes every refs/heads/* — including the materialized
+    # state branch itself: machinery commits get marks, those commits are
+    # force-replaced each run, and the THIRD sync dies on their missing
+    # objects (first continuous on-push run, 2026-10-21).
+    sync_branch = git(["symbolic-ref", "--short", "HEAD"], cfg.out).strip()
     if state_in_clone:
         # The state maps source commits to REWRITTEN objects, which live only
         # in the mirror — a fresh clone must fetch them or fast-import dies
@@ -418,7 +424,8 @@ def build_filtered(cfg: BuildConfig) -> dict:
                 'history_epoch: "new". Never both silently.'
             )
     args = ["filter-repo", "--force", "--invert-paths", "--prune-empty", "always",
-            "--state-branch", STATE_BRANCH]
+            "--state-branch", STATE_BRANCH,
+            "--refs", f"refs/heads/{sync_branch}"]
     for pat in cfg.strip:
         if any(ch in pat for ch in "*?["):
             args += ["--path-glob", pat]

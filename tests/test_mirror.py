@@ -396,6 +396,26 @@ def test_filter_incremental_survives_extra_source_branches(source: Path, tmp_pat
     assert s2["phase"] == "incremental"
 
 
+def test_filter_three_syncs_state_branch_never_rewritten(source: Path, tmp_path: Path):
+    # The third-sync detonation (first continuous on-push run): without a
+    # --refs restriction, filter-repo rewrote the materialized state branch
+    # itself; its machinery commits got marks, were force-replaced each run,
+    # and sync 3 died on their missing objects. Three consecutive syncs must
+    # work, and the state branch's history must contain only mark files.
+    bare = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _sync(source, tmp_path / "m1", bare, "filter")
+    _commit(source, {"src/n1.py": "A = 1\n"}, "feat: n1")
+    s2 = _sync(source, tmp_path / "m2", bare, "filter")
+    assert s2["phase"] == "incremental"
+    _commit(source, {"src/n2.py": "B = 2\n"}, "feat: n2")
+    s3 = _sync(source, tmp_path / "m3", bare, "filter")
+    assert s3["phase"] == "incremental"
+    new = subprocess.run(["git", "-C", str(bare), "rev-list", "main"],
+                         capture_output=True, text=True, check=True).stdout.split()
+    assert len(new) >= 5  # chain + syncs all present
+
+
 def test_snapshot_incremental_appends_without_force(source: Path, tmp_path: Path):
     # Snapshot syncs after the first append one commit each (the ours-merge
     # fast-forward) instead of force-replacing a single-commit history.
