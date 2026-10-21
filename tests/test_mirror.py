@@ -384,6 +384,9 @@ def test_filter_incremental_survives_extra_source_branches(source: Path, tmp_pat
     # fetching them. The rewrite is now single-branch — side branches must
     # not poison phase B.
     _git(["branch", "side-experiment"], source)
+    # Annotated tags mint target-only marks (the live 40-orphan class) AND
+    # their messages bypass the commit callbacks — excluded from the rewrite.
+    _git(["tag", "-a", "v0.1.0", "-m", "release: the secret plan is working"], source)
     bare = tmp_path / "origin.git"
     subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
     s1 = _sync(source, tmp_path / "m1", bare, "filter")

@@ -362,12 +362,15 @@ def build_filtered(cfg: BuildConfig) -> dict:
         )
     if cfg.out.exists():
         shutil.rmtree(cfg.out)
-    # --single-branch: the mirror syncs ONE branch, so the rewrite (and the
-    # state map) must cover exactly that branch — rewriting every source
-    # branch mints state entries for objects that never reach the mirror,
-    # and the next incremental run dies fetching them (third live attempt).
-    git(["clone", "-q", "--no-local", "--single-branch", str(cfg.source), str(cfg.out)],
-        cfg.source.parent)
+    # --single-branch --no-tags: the mirror syncs ONE branch, so the rewrite
+    # (and the state map) must cover exactly that branch — side branches and
+    # tags mint state entries for objects that never reach the mirror, and
+    # the next incremental run dies fetching them (third and fourth live
+    # attempts; the 40 orphan marks were the source's 40 release tags).
+    # Tags are also a LEAK surface until they get their own message tier:
+    # annotation messages bypass the commit callbacks entirely.
+    git(["clone", "-q", "--no-local", "--single-branch", "--no-tags",
+         str(cfg.source), str(cfg.out)], cfg.source.parent)
     # Identity FIRST: --state-branch makes filter-repo commit, and a bare CI
     # runner has no git identity ("Author identity unknown" — caught by the
     # public repo's own CI, not by a configured laptop).
