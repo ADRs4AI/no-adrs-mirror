@@ -88,6 +88,9 @@ digests: 45 staged (dry run — prompts recorded, no API call)
 # .github/workflows/no-adrs-mirror.yml — on the PRIVATE source repo
 on:
   push: { branches: [main] }
+concurrency:            # racing pushes queue up; the newest wins — never two
+  group: no-adrs-mirror #   concurrent rebuilds force-pushing over each other
+  cancel-in-progress: true
 jobs:
   mirror:
     runs-on: ubuntu-latest
@@ -120,6 +123,12 @@ jobs:
 The Action is a wrapper around `mirror.py`, a single typed Python file —
 stdlib only; `anthropic` and `git-filter-repo` are installed only when used.
 
+**New to this? The [manual](docs/manual/README.md)** walks the whole path in
+three sittings: [getting started](docs/manual/01-getting-started.md) (preview
+first, always), [going public](docs/manual/02-going-public.md), and
+[troubleshooting](docs/manual/03-troubleshooting.md) — every error our own
+first runs hit, with its fix.
+
 ## The notice (what a mirror reader sees)
 
 Counts from the receipted run; prose as `write_notice` writes it today:
@@ -146,7 +155,7 @@ maintainers; its license is decided separately from this code's.
 `adr://v1/repo/ADRs4AI/vscode-adrs4ai/adr/<number>#<anchor>`; a resolving
 Address is the citation.
 
-History mode: `snapshot`. Generated <UTC timestamp> by no-adrs-mirror 0.2.0.
+History mode: `snapshot`. Generated <UTC timestamp> by [no-adrs-mirror](https://github.com/marketplace/actions/no-adrs-mirror) 0.3.0.
 ```
 
 ## The four postures (no `mode` input — each is a configuration)

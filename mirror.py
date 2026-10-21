@@ -268,6 +268,37 @@ def check_approved(cfg: BuildConfig) -> None:
         )
 
 
+def removal_summary(cfg: BuildConfig) -> str:
+    """A per-rule removal log for $GITHUB_STEP_SUMMARY (the founder's ask,
+    2026-10-21): the operator reviewing a run — especially a dry run — sees
+    WHAT each strip rule removed without downloading the artifact. A rule
+    that removed nothing shows 0: a legible absence, not a silent one."""
+    kept, stripped = partition(tracked_files(cfg.source), cfg.strip)
+    per: dict[str, list[str]] = {p: [] for p in cfg.strip}
+    for f in stripped:
+        for p in cfg.strip:
+            if is_stripped(f, normalize_patterns([p])):
+                per[p].append(f)
+                break
+    lines = [
+        f"**Withheld: {len(stripped)} files · kept: {len(kept)}** — what each rule removed:",
+        "",
+        "| rule | files | first examples |",
+        "|---|---|---|",
+    ]
+    for p in cfg.strip:
+        fs = per[p]
+        ex = ", ".join(f"`{x}`" for x in fs[:3]) + (" …" if len(fs) > 3 else "")
+        lines.append(f"| `{p}` | {len(fs)} | {ex if fs else '— (matched nothing)'} |")
+    if len(stripped) <= 400:
+        lines += ["", "<details><summary>Every withheld path</summary>", ""]
+        lines += [f"- `{f}`" for f in stripped]
+        lines += ["", "</details>"]
+    else:
+        lines += ["", f"_Full list ({len(stripped)} paths) in the run's report JSON._"]
+    return "\n".join(lines)
+
+
 def build_snapshot(cfg: BuildConfig) -> dict:
     """One-commit mirror: the kept tree at source HEAD, zero history, zero
     message leakage. The quick-poise mode; filter mode is the linkable one.
@@ -608,7 +639,9 @@ def write_notice(cfg: BuildConfig, stats: dict, digest_stats: dict | None, now: 
     lines += [
         f"History mode: `{cfg.history}`."
         + msg_note
-        + f" Generated {now} by no-adrs-mirror {__version__}.",
+        + f" Generated {now} by "
+        + f"[no-adrs-mirror](https://github.com/marketplace/actions/no-adrs-mirror) "
+        + f"{__version__}.",
         "",
     ]
     path = cfg.out / NOTICE_FILE
@@ -874,6 +907,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg.terms = ns.terms
     check_approved(cfg)  # fail-closed, before anything is written
     stats = build_filtered(cfg) if cfg.history == "filter" else build_snapshot(cfg)
+    step_summary(removal_summary(cfg))
     digest_stats = None
     if cfg.digest != "none":
         client: DigestClient

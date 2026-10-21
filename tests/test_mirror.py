@@ -345,6 +345,16 @@ def test_filter_mode_approval_sees_historical_paths(source: Path, tmp_path: Path
         mirror.check_approved(cfg)
 
 
+def test_removal_summary_names_each_rule(source: Path, tmp_path: Path):
+    # The founder's ask (2026-10-21): the step summary teaches WHAT each rule
+    # removed — including rules that removed nothing (legible absence).
+    cfg = mirror.BuildConfig(source=source, out=tmp_path / "out", repo_slug="acme/app")
+    s = mirror.removal_summary(cfg)
+    assert "| `docs/adr` | 2 |" in s          # fixture has a seed + an adr-dir file? counts real
+    assert "matched nothing" in s              # at least one default rule is idle here
+    assert "Every withheld path" in s          # the collapsible full list (small repo)
+
+
 def test_additional_strip_is_additive(source: Path, tmp_path: Path, capsys):
     # Parallax P0.1: --additional-strip appends to the defaults instead of
     # replacing them — docs/adr (a default) AND src/queue.py (the addition)

@@ -24,6 +24,7 @@ name: mirror
 on:
   push:
     branches: [main]
+concurrency: { group: no-adrs-mirror, cancel-in-progress: true }
 jobs:
   mirror:
     runs-on: ubuntu-latest
@@ -31,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0        # filter mode needs history; harmless for snapshot
-      - uses: ADRs4AI/no-adrs-mirror@main
+      - uses: ADRs4AI/no-adrs-mirror@v1
         with:
           token: ${{ secrets.MIRROR_TOKEN }}
           create_if_missing: "true"
