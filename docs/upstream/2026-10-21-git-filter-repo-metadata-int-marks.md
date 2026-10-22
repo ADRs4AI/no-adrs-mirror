@@ -1,7 +1,8 @@
 # Upstream issue draft — git-filter-repo: `--state-branch` incremental runs crash on pruned commits (`TypeError: %b requires a bytes-like object … not 'int'`)
 
-- **Status**: DRAFT — not filed. Filing is an external act and waits on the
-  founder's word (ADR-0001 `QST-UPSTREAM-FILE`).
+- **Status**: FILED 2026-10-22 as
+  [newren/git-filter-repo#775](https://github.com/newren/git-filter-repo/issues/775)
+  — the founder's word in ADR-0001 `QST-UPSTREAM-FILE` (Option A, his hand).
 - **Target**: https://github.com/newren/git-filter-repo/issues
 - **Version**: 2.47.0 (pypi and Homebrew, `a40bce548d2c`); upstream HEAD as of
   2026-10-21 has no fix (newest script-touching commits: typos, signatures,
