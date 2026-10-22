@@ -83,7 +83,7 @@ Yes, Option B sounds about right: Staged by default, with the ability to opt-in 
 ---
 
 ### QST-SPECIMEN-UNPAUSE: It-8 is fixed — does the specimen go back to continuous on-push?
-- Status: unanswered
+- Status: answered
 - Why asking: the pause condition you set is half-met — "It-8 fixed" is done (It-9: shim + 30/30 + all three live shapes green on the real pair), and "your word" is this question. Un-pausing restarts your a/b/c monitoring protocol (interference / correctness / measures) with the vscode crew.
 - Need: pick a letter (or override — any shape answers)
 
@@ -94,13 +94,13 @@ Options:
 **Recommendation**: (by Covenant 5, Claude Fable 5, 2026-10-21)
 **A — continuous now.** *Rationale*: the crash class is fixed at its root (upstream mechanism named, shim tested in all three delta shapes, 30/30 incl. the three-deep state-consumption test) and the post-fix verification dispatch on the real pair is the same machinery A would run on push; B's observation window duplicates what the unit+integration+live evidence already covers while delaying the monitoring you asked for. *Confidence*: 0.85 — the remaining unknown is traffic shapes nobody modeled, and those arrive under A with concurrency + fail-closed guards holding. *If wrong*: a new failure class in live traffic — the workflow is one line to re-pause, and B becomes the posture with that class as its subject.
 
-**ANS:** (by <name>, <date optional>)
-[Fill this in]
+**ANS:** (by Jérémie Lumbroso)
+OK, let's go with Option A.
 
 ---
 
 ### QST-UPSTREAM-FILE: File the git-filter-repo bug upstream — and who presses send?
-- Status: unanswered
+- Status: answered
 - Why asking: the TypeError is a pure upstream bug (reproduces on a 4-commit toy repo with stock filter-repo 2.47.0, no engine code involved) that bites anyone combining `--state-branch` with pruning; the issue draft is written (`docs/upstream/2026-10-21-git-filter-repo-metadata-int-marks.md`, repro + mechanism + fix sketch). Filing is an external act in your name (gh operates as your account), so it waits on your word — the publication gate.
 - Need: pick a letter (or override — any shape answers)
 
@@ -112,8 +112,26 @@ Options:
 **Recommendation**: (by Covenant 5, Claude Fable 5, 2026-10-21)
 **A — Covenant files, with your word.** *Rationale*: the ecosystem's thesis is contribute-the-thinking-back, the draft costs you one read, and an upstream fix eventually retires our shim (the best end-state for a pinned patch); C leaves every other `--state-branch` user to rediscover a crash we have fully named. *Confidence*: 0.8 — because the only real question is the account it ships under, which is yours to call. *If wrong*: any discomfort with model-filed issues on your account — then B, same draft, zero rework.
 
-**ANS:** (by <name>, <date optional>)
-[Fill this in]
+**ANS:** (by Jérémie Lumbroso)
+Yes, Option A. I just read the draft, it's excellent work, but the bug report didn't work. So you revisited it, and now I confirm I get:
+```
+New history written in 0.16 seconds; now repacking/cleaning...
+Traceback (most recent call last):
+  File "/opt/homebrew/bin/git-filter-repo", line 4976, in <module>
+    main()
+    ~~~~^^
+  File "/opt/homebrew/bin/git-filter-repo", line 4973, in main
+    filter.run()
+    ~~~~~~~~~~^^
+  File "/opt/homebrew/bin/git-filter-repo", line 4936, in run
+    self._record_metadata(self.results_tmp_dir(), self._orig_refs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/bin/git-filter-repo", line 4792, in _record_metadata
+    f.write(b'%s %s %s\n' % (old_hash, new_hash, refname))
+            ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TypeError: %b requires a bytes-like object, or an object that implements __bytes__, not 'int'
+```
+Great work. Note that this is a good example of why providing a record in delegation is the right thing, cf. [the epistemic vs cybernetic delegation paper](https://arxiv.org/abs/2610.00961).
 
 ---
 
