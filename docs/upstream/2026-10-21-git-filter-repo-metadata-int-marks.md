@@ -41,7 +41,14 @@ so `_remap_to` returns an `int`, which flows into `ref_maps` /
 First runs never hit it (every rewrite is in this run's graph); any
 incremental run whose delta contains a pruned commit does.
 
-### Minimal reproduction (two runs, four commits)
+### Minimal reproduction (two runs, four commits, fresh clone each run)
+
+Each run starts from a fresh clone of the original history plus the persisted
+state branch — the shape any incremental pipeline has. (An earlier draft
+reused run 1's rewritten clone and tried to `merge --ff-only` the new
+upstream commit; after a rewrite those histories have diverged, so the merge
+can only fail and a run with no new commit shows no bug — founder-caught,
+2026-10-21.)
 
 ```sh
 #!/bin/sh
@@ -54,20 +61,32 @@ mkdir -p docs src
 echo "code1" > src/a.txt;  git add -A; git commit -q -m "feat: a"
 echo "doc1"  > docs/x.md;  git add -A; git commit -q -m "docs: x"
 echo "code2" > src/b.txt;  git add -A; git commit -q -m "feat: b"
-git clone -q --no-local . "$W/work"
-cd "$W/work"
+
+# run 1: fresh clone, filter with persistent state
+git clone -q --no-local . "$W/work1"
+cd "$W/work1"
 git filter-repo --force --invert-paths --path docs --prune-empty always --state-branch sb
 echo "=== run 1 OK ==="
+
+# a new record-only commit lands upstream
 cd "$W/upstream"
 echo "doc2" > docs/y.md; git add -A; git commit -q -m "docs: y"
-cd "$W/work"
-git fetch -q "$W/upstream" main          # filter-repo removed 'origin'
-git merge -q --ff-only FETCH_HEAD
+
+# run 2: fresh clone of the ORIGINAL history + run 1's state + run 1's
+# rewritten objects (in a real pipeline, fetched from wherever run 1's
+# result was pushed; a non-heads ref keeps them out of the rewrite)
+git clone -q --no-local . "$W/work2"
+cd "$W/work2"
+git fetch -q "$W/work1" sb:sb
+git fetch -q "$W/work1" main:refs/mirror/prior
 git filter-repo --force --invert-paths --path docs --prune-empty always --state-branch sb
 echo "=== run 2 OK (bug absent) ==="
 ```
 
-Run 2 crashes with the TypeError above on 2.47.0.
+Run 2 crashes on 2.47.0 at the `ref-map` writer (line 4792 — the delta's
+only commit is pruned, so `refs/heads/main` maps to an int mark). With a kept
+commit after the pruned one in the delta, the same int reaches the
+`first-changed-commits` writer (line 4802) instead.
 
 ### Suggested fix
 
