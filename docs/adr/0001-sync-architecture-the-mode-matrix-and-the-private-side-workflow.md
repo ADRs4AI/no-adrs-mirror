@@ -170,6 +170,8 @@ Options:
 **Recommendation**: (by Covenant 5, Claude Fable 5, 2026-10-22)
 **A — epoch now.** *Rationale*: the notice promises the record is withheld, and a shipped QST block with a live Recommendation is the record; the honest artifact is worth one rewrite in its first hour, when no link yet depends on any SHA — the same arithmetic that made the pre-flip moment right. *Confidence*: 0.85 — because the only thing A costs today is a disclosed rebuild of a repo nobody has referenced yet. *If wrong*: a fork, star-with-link, or citation appearing before your answer shifts the calculus toward B — I will say so in this block if I see one.
 
+Tripwire log (Covenant 5, stacked, never overwriting the above): 2026-10-22 — star #1 is the rights-holder's own (launch star list; pins nothing). 2026-10-23 — **first external stargazer** (`amcarrella3`): a bare star pins no SHA, so A's arithmetic still holds, but the mirror is now being *found*, and the "nothing references it yet" premise ages a little each day. No fork, no link-bearing citation sighted.
+
 **ANS:** (by <name>, <date optional>)
 [Fill this in]
 
